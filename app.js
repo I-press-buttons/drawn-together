@@ -57,7 +57,6 @@
   }
 
   /* ── Question Packs (server-side) ── */
-  const API_BASE = '/api/packs';
   let questionPacks = [];
 
   /* ── User marks (favorites / retired, server-side) ── */
@@ -65,27 +64,22 @@
   let sessionHearts = 0;
 
   async function loadMarks() {
-    try {
-      const res = await fetch('/api/marks');
-      if (res.ok) marks = await res.json();
-    } catch (e) { /* keep empty defaults */ }
+    marks = await window.store.loadMarks();
   }
 
   function isFavorite(qkey) { return marks.favorites.includes(qkey); }
   function isRetired(qkey) { return marks.retired.includes(qkey); }
 
-  /* Optimistic toggle: mutate locally, revert if the server rejects. */
+  /* Optimistic toggle: mutate locally, revert if the backend rejects. */
   async function setMark(listName, qkey, on) {
     const list = marks[listName];
     const had = list.includes(qkey);
     if (on && !had) list.push(qkey);
     if (!on && had) marks[listName] = list.filter(k => k !== qkey);
-    try {
-      const res = await fetch(`/api/marks/${listName}/${qkey}`, { method: on ? 'POST' : 'DELETE' });
-      if (res.ok) { marks = await res.json(); return true; }
-    } catch (e) { /* fall through to revert */ }
+    const result = await window.store.setMark(listName, qkey, on);
+    if (result) { marks = result; return true; }
     await loadMarks();
-    showToast("Couldn't save that — check the server");
+    showToast("Couldn't save that — check the connection");
     return false;
   }
 
@@ -99,34 +93,18 @@
   }
 
   async function loadPacks() {
-    try {
-      const res = await fetch(API_BASE);
-      if (res.ok) questionPacks = await res.json();
-    } catch (e) { questionPacks = []; }
+    questionPacks = await window.store.loadPacks();
   }
 
   async function createPack(name) {
-    const res = await fetch(API_BASE, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ name }),
-    });
-    if (res.ok) {
-      const pack = await res.json();
-      questionPacks.push(pack);
-      return pack;
-    }
-    return null;
+    const pack = await window.store.createPack(name);
+    if (pack) questionPacks.push(pack);
+    return pack;
   }
 
   async function togglePack(packId, enabled) {
-    const res = await fetch(`${API_BASE}/${packId}`, {
-      method: 'PUT',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ enabled }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
+    const updated = await window.store.updatePack(packId, { enabled });
+    if (updated) {
       const idx = questionPacks.findIndex(p => p.id === packId);
       if (idx !== -1) questionPacks[idx] = updated;
       return true;
@@ -135,8 +113,7 @@
   }
 
   async function deletePack(packId) {
-    const res = await fetch(`${API_BASE}/${packId}`, { method: 'DELETE' });
-    if (res.ok) {
+    if (await window.store.deletePack(packId)) {
       questionPacks = questionPacks.filter(p => p.id !== packId);
       return true;
     }
@@ -144,41 +121,28 @@
   }
 
   async function addQuestionToPack(packId, text, rarity, category) {
-    const res = await fetch(`${API_BASE}/${packId}/questions`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ text, rarity, category }),
-    });
-    if (res.ok) {
-      const q = await res.json();
+    const q = await window.store.addQuestion(packId, { text, rarity, category });
+    if (q) {
       const pack = questionPacks.find(p => p.id === packId);
       if (pack) pack.questions.push(q);
-      return q;
     }
-    return null;
+    return q;
   }
 
   async function updateQuestion(packId, qid, fields) {
-    const res = await fetch(`${API_BASE}/${packId}/questions/${qid}`, {
-      method: 'PUT',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(fields),
-    });
-    if (res.ok) {
-      const updated = await res.json();
+    const updated = await window.store.updateQuestion(packId, qid, fields);
+    if (updated) {
       const pack = questionPacks.find(p => p.id === packId);
       if (pack) {
         const idx = pack.questions.findIndex(q => q.id === qid);
         if (idx !== -1) pack.questions[idx] = updated;
       }
-      return updated;
     }
-    return null;
+    return updated;
   }
 
   async function deleteQuestionFromPack(packId, qid) {
-    const res = await fetch(`${API_BASE}/${packId}/questions/${qid}`, { method: 'DELETE' });
-    if (res.ok) {
+    if (await window.store.deleteQuestion(packId, qid)) {
       const pack = questionPacks.find(p => p.id === packId);
       if (pack) pack.questions = pack.questions.filter(q => q.id !== qid);
       return true;
