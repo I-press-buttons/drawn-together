@@ -1,0 +1,15 @@
+.git
+.claude
+.impeccable
+docs
+test_server.py
+question_packs.json
+user_data.json
+__pycache__
+*.pyc
+.DS_Store
+README.md
+PRODUCT.md
+Dockerfile
+.dockerignore
+.gitignore

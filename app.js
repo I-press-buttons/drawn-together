@@ -15,7 +15,7 @@
   async function loadQuestions() {
     try {
       const res = await fetch('questions.json');
-      if (res.ok) QUESTIONS.push(...(await res.json()));
+      if (res.ok) QUESTIONS.push(...(await res.json()).map(q => ({ ...q, qkey: q.id })));
     } catch (e) { /* fetch failed — deck stays empty, packs may still load */ }
   }
 
@@ -26,6 +26,7 @@
   let score = 0;
   let scoreEnabled = true;
   let questionsAnswered = 0;
+  let rarestAnswered = null;
 
   /* ── Theme ── */
   function getTheme() {
@@ -58,6 +59,44 @@
   /* ── Question Packs (server-side) ── */
   const API_BASE = '/api/packs';
   let questionPacks = [];
+
+  /* ── User marks (favorites / retired, server-side) ── */
+  let marks = { favorites: [], retired: [] };
+  let sessionHearts = 0;
+
+  async function loadMarks() {
+    try {
+      const res = await fetch('/api/marks');
+      if (res.ok) marks = await res.json();
+    } catch (e) { /* keep empty defaults */ }
+  }
+
+  function isFavorite(qkey) { return marks.favorites.includes(qkey); }
+  function isRetired(qkey) { return marks.retired.includes(qkey); }
+
+  /* Optimistic toggle: mutate locally, revert if the server rejects. */
+  async function setMark(listName, qkey, on) {
+    const list = marks[listName];
+    const had = list.includes(qkey);
+    if (on && !had) list.push(qkey);
+    if (!on && had) marks[listName] = list.filter(k => k !== qkey);
+    try {
+      const res = await fetch(`/api/marks/${listName}/${qkey}`, { method: on ? 'POST' : 'DELETE' });
+      if (res.ok) { marks = await res.json(); return true; }
+    } catch (e) { /* fall through to revert */ }
+    await loadMarks();
+    showToast("Couldn't save that — check the server");
+    return false;
+  }
+
+  function findQuestionByKey(qkey) {
+    if (qkey.startsWith('b')) return QUESTIONS.find(q => q.qkey === qkey) || null;
+    const m = qkey.match(/^p(\d+)-(\d+)$/);
+    if (!m) return null;
+    const pack = questionPacks.find(p => p.id === parseInt(m[1]));
+    const q = pack && pack.questions.find(x => x.id === parseInt(m[2]));
+    return q ? { text: q.text, rarity: q.rarity, category: q.category || 'Custom', qkey } : null;
+  }
 
   async function loadPacks() {
     try {
@@ -119,6 +158,24 @@
     return null;
   }
 
+  async function updateQuestion(packId, qid, fields) {
+    const res = await fetch(`${API_BASE}/${packId}/questions/${qid}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(fields),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      const pack = questionPacks.find(p => p.id === packId);
+      if (pack) {
+        const idx = pack.questions.findIndex(q => q.id === qid);
+        if (idx !== -1) pack.questions[idx] = updated;
+      }
+      return updated;
+    }
+    return null;
+  }
+
   async function deleteQuestionFromPack(packId, qid) {
     const res = await fetch(`${API_BASE}/${packId}/questions/${qid}`, { method: 'DELETE' });
     if (res.ok) {
@@ -139,10 +196,12 @@
           rarity: q.rarity,
           category: q.category || 'Custom',
           pack: pack.name,
+          qkey: `p${pack.id}-${q.id}`,
         });
       }
     }
-    return extra.length === 0 ? [...QUESTIONS] : [...QUESTIONS, ...extra];
+    const all = extra.length === 0 ? [...QUESTIONS] : [...QUESTIONS, ...extra];
+    return all.filter(q => !isRetired(q.qkey));
   }
 
   function getEnabledPackCount() {
@@ -151,6 +210,7 @@
 
   /* ── Modal / Pack UI ── */
   let openPackId = null;
+  let editingQ = null;   /* "packId-qid" while a question row is in edit mode */
 
   function openModal() {
     renderPacks();
@@ -197,9 +257,27 @@
               ${rCount === 0 ? '<p class="pack-q-empty">No questions yet</p>' : ''}
               ${pack.questions.map(q => {
                 const r = RARITY[q.rarity];
+                if (editingQ === `${pack.id}-${q.id}`) {
+                  return `<form class="pack-q pack-q-edit" data-edit-form="${pack.id}-${q.id}" autocomplete="off">
+                    <input class="pack-add-input" type="text" maxlength="300" value="${escapeAttr(q.text)}" required>
+                    <div class="pack-add-meta">
+                      <select>${Object.entries(RARITY).map(([k, v]) =>
+                        `<option value="${k}" ${k === q.rarity ? 'selected' : ''}>${v.label}</option>`).join('')}</select>
+                      <select>${['General', 'Future Us', 'Custom'].map(c =>
+                        `<option ${c === (q.category || 'Custom') ? 'selected' : ''}>${c}</option>`).join('')}</select>
+                    </div>
+                    <div class="pack-q-edit-actions">
+                      <button class="pack-add-btn" type="submit">Save</button>
+                      <button class="btn-restore" type="button" data-cancel-edit>Cancel</button>
+                    </div>
+                  </form>`;
+                }
                 return `<div class="pack-q">
-                  <span class="pack-q-text" title="${escapeHTML(q.text)}">${escapeHTML(q.text)}</span>
+                  <span class="pack-q-text" title="${escapeAttr(q.text)}">${escapeHTML(q.text)}</span>
                   <span class="pack-q-rarity" style="color:${r.color}">${r.label}</span>
+                  <button class="pack-q-edit-btn" data-edit="${pack.id}-${q.id}" aria-label="Edit question">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                  </button>
                   <button class="pack-q-del" data-pack="${pack.id}" data-qid="${q.id}" aria-label="Delete question">&times;</button>
                 </div>`;
               }).join('')}
@@ -218,6 +296,54 @@
               </div>
               <button class="pack-add-btn" type="submit">Add</button>
             </form>
+          </div>
+        </div>
+      `;
+    }
+
+    /* Greatest hits (favorites) */
+    const favs = marks.favorites.map(findQuestionByKey).filter(Boolean);
+    html += `
+      <div class="pack-card marks-section">
+        <div class="pack-header">
+          <span class="marks-section-icon" aria-hidden="true">♥</span>
+          <span class="pack-name">Greatest Hits</span>
+          <span class="pack-count">${favs.length} ${favs.length === 1 ? 'question' : 'questions'}</span>
+        </div>
+        <div class="pack-body open">
+          <div class="pack-questions">
+            ${favs.length === 0 ? '<p class="pack-q-empty">Heart a question mid-game to save it here</p>' : ''}
+            ${favs.map(q => {
+              const r = RARITY[q.rarity];
+              return `<div class="pack-q">
+                <span class="pack-q-text" title="${escapeAttr(q.text)}">${escapeHTML(q.text)}</span>
+                <span class="pack-q-rarity" style="color:${r.color}">${r.label}</span>
+                <button class="pack-q-del" data-unfav="${q.qkey}" aria-label="Remove from greatest hits">&times;</button>
+              </div>`;
+            }).join('')}
+          </div>
+          ${favs.length > 0 ? '<button class="btn btn-ghost marks-play-btn" id="playFavsBtn">Play favorites round</button>' : ''}
+        </div>
+      </div>
+    `;
+
+    /* Retired questions */
+    const retired = marks.retired.map(findQuestionByKey).filter(Boolean);
+    if (retired.length > 0) {
+      html += `
+        <div class="pack-card marks-section">
+          <div class="pack-header">
+            <span class="marks-section-icon" aria-hidden="true">⊘</span>
+            <span class="pack-name">Retired</span>
+            <span class="pack-count">${retired.length}</span>
+          </div>
+          <div class="pack-body open">
+            <div class="pack-questions">
+              ${retired.map(q => `<div class="pack-q">
+                <span class="pack-q-text" title="${escapeAttr(q.text)}">${escapeHTML(q.text)}</span>
+                <button class="btn-restore" data-restore="${q.qkey}">Restore</button>
+              </div>`).join('')}
+            </div>
           </div>
         </div>
       `;
@@ -270,9 +396,67 @@
     document.querySelectorAll('.pack-q-del').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
+        if (!btn.dataset.pack) return;   /* greatest-hits rows use data-unfav instead */
         const packId = parseInt(btn.dataset.pack);
         const qid = parseInt(btn.dataset.qid);
         await deleteQuestionFromPack(packId, qid);
+        await loadMarks();               /* server may have dropped orphaned marks */
+        renderPacks();
+      });
+    });
+
+    /* Un-favorite from greatest hits */
+    document.querySelectorAll('[data-unfav]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await setMark('favorites', btn.dataset.unfav, false);
+        renderPacks();
+      });
+    });
+
+    /* Restore a retired question */
+    document.querySelectorAll('[data-restore]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await setMark('retired', btn.dataset.restore, false);
+        renderPacks();
+      });
+    });
+
+    /* Play favorites round */
+    const playFavs = document.getElementById('playFavsBtn');
+    if (playFavs) playFavs.addEventListener('click', startFavoritesRound);
+
+    /* Enter edit mode */
+    document.querySelectorAll('[data-edit]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        editingQ = btn.dataset.edit;
+        renderPacks();
+        const form = document.querySelector('[data-edit-form]');
+        if (form) form.querySelector('input').focus();
+      });
+    });
+
+    /* Cancel edit */
+    document.querySelectorAll('[data-cancel-edit]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        editingQ = null;
+        renderPacks();
+      });
+    });
+
+    /* Save edit */
+    document.querySelectorAll('[data-edit-form]').forEach(form => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const [packId, qid] = form.dataset.editForm.split('-').map(Number);
+        const text = form.querySelector('input').value.trim();
+        if (!text) return;
+        const selects = form.querySelectorAll('select');
+        const updated = await updateQuestion(packId, qid, {
+          text, rarity: selects[0].value, category: selects[1].value,
+        });
+        if (!updated) { showToast("Couldn't save the edit"); return; }
+        editingQ = null;
         renderPacks();
       });
     });
@@ -288,6 +472,8 @@
   const $rarityLabel  = document.getElementById('rarityLabel');
   const $cardQuestion = document.getElementById('cardQuestion');
   const $cardCategory = document.getElementById('cardCategory');
+  const $favBtn       = document.getElementById('favBtn');
+  const $retireBtn    = document.getElementById('retireBtn');
   const $answeredBtn  = document.getElementById('answeredBtn');
   const $skipBtn      = document.getElementById('skipBtn');
   const $gameOver     = document.getElementById('gameOver');
@@ -319,12 +505,15 @@
     return a;
   }
 
-  function resetGame() {
-    deck = shuffle(getAllQuestions());
+  function resetGame(customDeck) {
+    /* Array.isArray guard: resetGame doubles as a click handler, which passes a MouseEvent */
+    deck = shuffle(Array.isArray(customDeck) ? customDeck : getAllQuestions());
     discard = [];
     currentCard = null;
     score = 0;
     questionsAnswered = 0;
+    rarestAnswered = null;
+    sessionHearts = 0;
     updateUI();
     showEmptyState();
     $gameOver.classList.add('hidden');
@@ -333,6 +522,15 @@
     $discardChevron.classList.remove('open');
     $discardToggle.setAttribute('aria-expanded', 'false');
     $drawBtn.focus();
+  }
+
+  function startFavoritesRound() {
+    const favs = marks.favorites.map(findQuestionByKey)
+      .filter(q => q && !isRetired(q.qkey));
+    if (favs.length === 0) return;
+    closeModal();
+    resetGame(favs);
+    showToast(`Favorites round — ${favs.length} greatest hit${favs.length === 1 ? '' : 's'}`);
   }
 
   function showEmptyState() {
@@ -372,6 +570,9 @@
     $cardStage.classList.remove('animate-in');
     void $cardStage.offsetWidth;
     $cardStage.classList.add('animate-in');
+
+    $favBtn.classList.toggle('active', isFavorite(currentCard.qkey));
+    $favBtn.setAttribute('aria-pressed', isFavorite(currentCard.qkey) ? 'true' : 'false');
   }
 
   function answerCard() {
@@ -384,6 +585,9 @@
       showScorePop(pts);
     }
     questionsAnswered++;
+    if (!rarestAnswered || RARITY[currentCard.rarity].points > RARITY[rarestAnswered.rarity].points) {
+      rarestAnswered = currentCard;
+    }
 
     /* move to discard */
     discard.unshift({ ...currentCard, id: Date.now() });
@@ -446,6 +650,19 @@
         </div>
       `;
     }
+
+    document.getElementById('gameOverSub').innerHTML =
+      `You made it through <strong>${questionsAnswered}</strong> question${questionsAnswered === 1 ? '' : 's'} together.<br>Here's to many more conversations.`;
+
+    let extra = '';
+    if (rarestAnswered) {
+      const r = RARITY[rarestAnswered.rarity];
+      extra += `Rarest catch: “${escapeHTML(rarestAnswered.text)}” <span style="color:${r.color}">(${r.label})</span>`;
+    }
+    if (sessionHearts > 0) {
+      extra += `${extra ? '<br>' : ''}You saved ${sessionHearts} to your greatest hits.`;
+    }
+    document.getElementById('gameOverExtra').innerHTML = extra;
   }
 
   function showScorePop(pts) {
@@ -507,12 +724,23 @@
     return div.innerHTML;
   }
 
-  function showToast(msg) {
+  function escapeAttr(str) {
+    return escapeHTML(str).replace(/"/g, '&quot;');
+  }
+
+  function showToast(msg, action) {
     const existing = document.querySelector('.toast');
     if (existing) existing.remove();
     const el = document.createElement('div');
     el.className = 'toast';
     el.textContent = msg;
+    if (action) {
+      const btn = document.createElement('button');
+      btn.className = 'toast-action';
+      btn.textContent = action.label;
+      btn.addEventListener('click', () => { el.remove(); action.fn(); });
+      el.appendChild(btn);
+    }
     document.body.appendChild(el);
     el.addEventListener('animationend', (e) => {
       if (e.animationName === 'toastOut') el.remove();
@@ -525,6 +753,45 @@
   $skipBtn.addEventListener('click', skipCard);
   $resetBtn.addEventListener('click', resetGame);
   $themeToggle.addEventListener('click', toggleTheme);
+
+  $favBtn.addEventListener('click', async () => {
+    if (!currentCard) return;
+    const on = !isFavorite(currentCard.qkey);
+    $favBtn.classList.toggle('active', on);
+    $favBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    if (await setMark('favorites', currentCard.qkey, on)) {
+      if (on) { sessionHearts++; showToast('Saved to your greatest hits'); }
+    } else {
+      renderCard();
+    }
+  });
+
+  $retireBtn.addEventListener('click', () => {
+    if (currentCard) retireCurrentCard();
+  });
+
+  function retireCurrentCard() {
+    const card = currentCard;
+    currentCard = null;
+    setMark('retired', card.qkey, true);
+
+    $cardStage.classList.remove('animate-in');
+    $cardStage.classList.add('animate-out');
+    setTimeout(() => {
+      updateUI();
+      showEmptyState();
+      $drawBtn.focus();
+      showToast('Retired — it won\'t come up again', {
+        label: 'Undo',
+        fn: async () => {
+          if (await setMark('retired', card.qkey, false)) {
+            deck.splice(Math.floor(Math.random() * (deck.length + 1)), 0, card);
+            updateUI();
+          }
+        },
+      });
+    }, 300);
+  }
 
   $scoreToggle.addEventListener('change', () => {
     toggleScore($scoreToggle.checked);
@@ -562,6 +829,54 @@
       renderPacks();
       showToast(`"${pack.name}" pack created`);
     }
+  });
+
+  /* ── Pack export / import ── */
+  function exportPacks() {
+    const data = questionPacks.map(p => ({
+      name: p.name,
+      questions: p.questions.map(q => ({
+        text: q.text, rarity: q.rarity, category: q.category || 'Custom',
+      })),
+    }));
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'couple-questions-packs.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async function importPacks(file) {
+    let data;
+    try { data = JSON.parse(await file.text()); } catch (e) {
+      showToast('Import failed: not valid JSON'); return;
+    }
+    const ok = Array.isArray(data) && data.every(p =>
+      typeof p.name === 'string' && Array.isArray(p.questions) &&
+      p.questions.every(q => q && typeof q.text === 'string'));
+    if (!ok) { showToast('Import failed: unrecognized file format'); return; }
+
+    for (const p of data) {
+      const pack = await createPack(p.name);
+      if (!pack) { showToast(`Import stopped: couldn't create "${p.name}"`); renderPacks(); return; }
+      for (const q of p.questions) {
+        const added = await addQuestionToPack(
+          pack.id, q.text, RARITY[q.rarity] ? q.rarity : 'common', q.category || 'Custom');
+        if (!added) { showToast('Import stopped: a question was rejected'); renderPacks(); return; }
+      }
+    }
+    renderPacks();
+    showToast(`Imported ${data.length} pack${data.length === 1 ? '' : 's'}`);
+  }
+
+  document.getElementById('exportPacksBtn').addEventListener('click', exportPacks);
+  document.getElementById('importPacksBtn').addEventListener('click', () => {
+    document.getElementById('importPacksFile').click();
+  });
+  document.getElementById('importPacksFile').addEventListener('change', (e) => {
+    if (e.target.files[0]) importPacks(e.target.files[0]);
+    e.target.value = '';
   });
 
   /* Keyboard shortcut: Escape closes modal */
@@ -622,7 +937,7 @@
   loadTheme();
   (async () => {
     await loadQuestions();
-    await loadPacks();
+    await Promise.all([loadPacks(), loadMarks()]);
     resetGame();
     toggleScore(true);
     updateDeckCount();
