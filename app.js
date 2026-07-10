@@ -831,6 +831,54 @@
     }
   });
 
+  /* ── Pack export / import ── */
+  function exportPacks() {
+    const data = questionPacks.map(p => ({
+      name: p.name,
+      questions: p.questions.map(q => ({
+        text: q.text, rarity: q.rarity, category: q.category || 'Custom',
+      })),
+    }));
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'couple-questions-packs.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async function importPacks(file) {
+    let data;
+    try { data = JSON.parse(await file.text()); } catch (e) {
+      showToast('Import failed: not valid JSON'); return;
+    }
+    const ok = Array.isArray(data) && data.every(p =>
+      typeof p.name === 'string' && Array.isArray(p.questions) &&
+      p.questions.every(q => q && typeof q.text === 'string'));
+    if (!ok) { showToast('Import failed: unrecognized file format'); return; }
+
+    for (const p of data) {
+      const pack = await createPack(p.name);
+      if (!pack) { showToast(`Import stopped: couldn't create "${p.name}"`); renderPacks(); return; }
+      for (const q of p.questions) {
+        const added = await addQuestionToPack(
+          pack.id, q.text, RARITY[q.rarity] ? q.rarity : 'common', q.category || 'Custom');
+        if (!added) { showToast('Import stopped: a question was rejected'); renderPacks(); return; }
+      }
+    }
+    renderPacks();
+    showToast(`Imported ${data.length} pack${data.length === 1 ? '' : 's'}`);
+  }
+
+  document.getElementById('exportPacksBtn').addEventListener('click', exportPacks);
+  document.getElementById('importPacksBtn').addEventListener('click', () => {
+    document.getElementById('importPacksFile').click();
+  });
+  document.getElementById('importPacksFile').addEventListener('change', (e) => {
+    if (e.target.files[0]) importPacks(e.target.files[0]);
+    e.target.value = '';
+  });
+
   /* Keyboard shortcut: Escape closes modal */
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && $modalOverlay.classList.contains('open')) {

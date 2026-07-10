@@ -147,6 +147,13 @@
         </div>
         <button class="btn-add" type="submit">Create Pack</button>
       </form>
+
+      <!-- Export / import -->
+      <div style="display:flex;gap:0.5rem;margin-top:0.75rem">
+        <button class="btn btn-ghost" id="exportPacksBtn" style="flex:1">Export packs</button>
+        <button class="btn btn-ghost" id="importPacksBtn" style="flex:1">Import packs</button>
+        <input type="file" id="importPacksFile" accept=".json,application/json" hidden>
+      </div>
     </div>
   </div>
 
