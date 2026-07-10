@@ -677,7 +677,7 @@
   }
 
   function renderAnsweredList() {
-    const visible = discard.slice(0, 10);
+    const visible = showAllAnswered ? discard : discard.slice(0, 10);
     if (discard.length === 0) {
       $answeredList.innerHTML = '<p class="answered-empty">No questions answered yet</p>';
     } else {
@@ -692,7 +692,10 @@
         `;
       }).join('');
     }
+    $answeredList.classList.toggle('expanded', showAllAnswered);
     $answeredCount.textContent = discard.length;
+    $answeredShowAll.classList.toggle('hidden', discard.length <= 10);
+    $answeredShowAll.textContent = showAllAnswered ? 'Show recent' : `Show all (${discard.length})`;
   }
 
   function updateUI() {
@@ -804,6 +807,11 @@
     const isOpen = $answeredList.classList.toggle('open');
     $answeredChevron.classList.toggle('open', isOpen);
     $answeredMobileToggle.setAttribute('aria-expanded', isOpen);
+  });
+
+  $answeredShowAll.addEventListener('click', () => {
+    showAllAnswered = !showAllAnswered;
+    renderAnsweredList();
   });
 
   /* ── Modal Event Listeners ── */
