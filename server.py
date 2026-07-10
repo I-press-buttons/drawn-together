@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Couple Question Game — custom Python server with pack-based question storage."""
+"""Drawn Together — custom Python server with pack-based question storage."""
 
 import http.server
 import json

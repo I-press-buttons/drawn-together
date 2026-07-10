@@ -1,4 +1,4 @@
-# Couple Questions
+# Drawn Together
 
 A zero-dependency party card game: draw question cards of increasing rarity
 and talk. Built with a static frontend (vanilla HTML/CSS/JS) and a Python
@@ -41,12 +41,12 @@ Build the image and run it with a named volume so packs and favorites
 survive container restarts and upgrades:
 
 ```sh
-docker build -t couple-questions .
-docker run -d --name couple-questions \
+docker build -t drawn-together .
+docker run -d --name drawn-together \
   -p 8080:8080 \
-  -v couple-questions-data:/data \
+  -v drawn-together-data:/data \
   --restart unless-stopped \
-  couple-questions
+  drawn-together
 ```
 
 The game is now at `http://localhost:8080` (or `http://<host-ip>:8080`
@@ -55,23 +55,23 @@ from other devices on your network).
 ### Upgrade to a new version
 
 ```sh
-docker build -t couple-questions .
-docker rm -f couple-questions
-docker run -d --name couple-questions -p 8080:8080 \
-  -v couple-questions-data:/data --restart unless-stopped couple-questions
+docker build -t drawn-together .
+docker rm -f drawn-together
+docker run -d --name drawn-together -p 8080:8080 \
+  -v drawn-together-data:/data --restart unless-stopped drawn-together
 ```
 
-Your data lives in the `couple-questions-data` volume, so it survives the
+Your data lives in the `drawn-together-data` volume, so it survives the
 container being replaced.
 
 ### Move the image to another machine (no registry needed)
 
 ```sh
-docker save couple-questions | gzip > couple-questions.tar.gz
+docker save drawn-together | gzip > drawn-together.tar.gz
 # copy the file over, then on the target machine:
-docker load < couple-questions.tar.gz
-docker run -d --name couple-questions -p 8080:8080 \
-  -v couple-questions-data:/data --restart unless-stopped couple-questions
+docker load < drawn-together.tar.gz
+docker run -d --name drawn-together -p 8080:8080 \
+  -v drawn-together-data:/data --restart unless-stopped drawn-together
 ```
 
 ## Tests
