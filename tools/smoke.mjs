@@ -41,6 +41,14 @@ await page.fill('.pack-add-input', 'Smoke question one?');
 await page.click('.pack-add-form button[type=submit]');
 await page.waitForSelector('.pack-q');
 
+// 3b. Edit the question inline
+await page.click('.pack-q-edit-btn');
+await page.waitForSelector('.pack-q-edit');
+await page.fill('.pack-q-edit input[type=text]', 'Smoke question edited?');
+await page.click('.pack-q-edit button[type=submit]');
+await page.waitForFunction(() =>
+  document.body.textContent.includes('Smoke question edited?'));
+
 // 4. Marks survived server round-trip
 const marks = await page.evaluate(() => window.store.loadMarks());
 if (marks.favorites.length !== 1) fail('favorite not persisted');
