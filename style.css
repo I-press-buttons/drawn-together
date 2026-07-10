@@ -1093,3 +1093,23 @@
   opacity: 0.7;
 }
 .btn-restore:hover, .btn-restore:focus-visible { opacity: 1; }
+
+/* ── Legendary / Mythic reveal ── */
+/* Static glow: always present so rarity reads even with reduced motion */
+.card[data-rarity="legendary"] { box-shadow: 0 0 0 1px var(--legendary), 0 0 18px -2px var(--legendary); }
+.card[data-rarity="mythic"]    { box-shadow: 0 0 0 1px var(--mythic),    0 0 18px -2px var(--mythic); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .card-stage.animate-in .card[data-rarity="legendary"] {
+    animation: rarityReveal 0.9s ease-out;
+    --reveal-color: var(--legendary);
+  }
+  .card-stage.animate-in .card[data-rarity="mythic"] {
+    animation: rarityReveal 0.9s ease-out;
+    --reveal-color: var(--mythic);
+  }
+  @keyframes rarityReveal {
+    0%   { box-shadow: 0 0 0 1px var(--reveal-color), 0 0 42px 6px var(--reveal-color); transform: scale(1.03); }
+    100% { box-shadow: 0 0 0 1px var(--reveal-color), 0 0 18px -2px var(--reveal-color); transform: scale(1); }
+  }
+}
