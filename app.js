@@ -158,6 +158,24 @@
     return null;
   }
 
+  async function updateQuestion(packId, qid, fields) {
+    const res = await fetch(`${API_BASE}/${packId}/questions/${qid}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(fields),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      const pack = questionPacks.find(p => p.id === packId);
+      if (pack) {
+        const idx = pack.questions.findIndex(q => q.id === qid);
+        if (idx !== -1) pack.questions[idx] = updated;
+      }
+      return updated;
+    }
+    return null;
+  }
+
   async function deleteQuestionFromPack(packId, qid) {
     const res = await fetch(`${API_BASE}/${packId}/questions/${qid}`, { method: 'DELETE' });
     if (res.ok) {
@@ -192,6 +210,7 @@
 
   /* ── Modal / Pack UI ── */
   let openPackId = null;
+  let editingQ = null;   /* "packId-qid" while a question row is in edit mode */
 
   function openModal() {
     renderPacks();
@@ -238,9 +257,27 @@
               ${rCount === 0 ? '<p class="pack-q-empty">No questions yet</p>' : ''}
               ${pack.questions.map(q => {
                 const r = RARITY[q.rarity];
+                if (editingQ === `${pack.id}-${q.id}`) {
+                  return `<form class="pack-q pack-q-edit" data-edit-form="${pack.id}-${q.id}" autocomplete="off">
+                    <input class="pack-add-input" type="text" maxlength="300" value="${escapeAttr(q.text)}" required>
+                    <div class="pack-add-meta">
+                      <select>${Object.entries(RARITY).map(([k, v]) =>
+                        `<option value="${k}" ${k === q.rarity ? 'selected' : ''}>${v.label}</option>`).join('')}</select>
+                      <select>${['General', 'Future Us', 'Custom'].map(c =>
+                        `<option ${c === (q.category || 'Custom') ? 'selected' : ''}>${c}</option>`).join('')}</select>
+                    </div>
+                    <div class="pack-q-edit-actions">
+                      <button class="pack-add-btn" type="submit">Save</button>
+                      <button class="btn-restore" type="button" data-cancel-edit>Cancel</button>
+                    </div>
+                  </form>`;
+                }
                 return `<div class="pack-q">
-                  <span class="pack-q-text" title="${escapeHTML(q.text)}">${escapeHTML(q.text)}</span>
+                  <span class="pack-q-text" title="${escapeAttr(q.text)}">${escapeHTML(q.text)}</span>
                   <span class="pack-q-rarity" style="color:${r.color}">${r.label}</span>
+                  <button class="pack-q-edit-btn" data-edit="${pack.id}-${q.id}" aria-label="Edit question">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                  </button>
                   <button class="pack-q-del" data-pack="${pack.id}" data-qid="${q.id}" aria-label="Delete question">&times;</button>
                 </div>`;
               }).join('')}
@@ -387,6 +424,42 @@
     /* Play favorites round */
     const playFavs = document.getElementById('playFavsBtn');
     if (playFavs) playFavs.addEventListener('click', startFavoritesRound);
+
+    /* Enter edit mode */
+    document.querySelectorAll('[data-edit]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        editingQ = btn.dataset.edit;
+        renderPacks();
+        const form = document.querySelector('[data-edit-form]');
+        if (form) form.querySelector('input').focus();
+      });
+    });
+
+    /* Cancel edit */
+    document.querySelectorAll('[data-cancel-edit]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        editingQ = null;
+        renderPacks();
+      });
+    });
+
+    /* Save edit */
+    document.querySelectorAll('[data-edit-form]').forEach(form => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const [packId, qid] = form.dataset.editForm.split('-').map(Number);
+        const text = form.querySelector('input').value.trim();
+        if (!text) return;
+        const selects = form.querySelectorAll('select');
+        const updated = await updateQuestion(packId, qid, {
+          text, rarity: selects[0].value, category: selects[1].value,
+        });
+        if (!updated) { showToast("Couldn't save the edit"); return; }
+        editingQ = null;
+        renderPacks();
+      });
+    });
   }
 
   /* ── DOM ── */
