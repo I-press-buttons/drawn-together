@@ -1,0 +1,1966 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Couple Question Game</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── Light Theme (default) ── */
+  :root {
+    --bg:       oklch(1 0 0);
+    --surface:  oklch(0.97 0.005 68);
+    --surface-raised: oklch(0.94 0.007 68);
+    --ink:      oklch(0.18 0.012 68);
+    --ink-dim:  oklch(0.42 0.008 68);
+    --ink-muted: oklch(0.58 0.006 68);
+    --primary:  oklch(0.60 0.18 65);
+    --primary-glow: oklch(0.60 0.18 65 / 0.3);
+    --primary-subtle: oklch(0.60 0.18 65 / 0.10);
+    --accent:   oklch(0.48 0.16 340);
+    --accent-subtle: oklch(0.48 0.16 340 / 0.12);
+    --common:   oklch(0.55 0.08 195);
+    --uncommon: oklch(0.52 0.12 260);
+    --rare:     oklch(0.48 0.15 310);
+    --epic:     oklch(0.50 0.17 30);
+    --legendary: oklch(0.52 0.18 60);
+    --mythic:   oklch(0.58 0.18 82);
+    --card-border: oklch(0 0 0 / 0.08);
+    --shadow-heavy: oklch(0 0 0 / 0.12);
+
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1.25rem;
+    --radius-xl: 1.75rem;
+
+    --font-display: 'New York', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+
+    --z-behind: -1;
+    --z-dropdown: 100;
+    --z-sticky: 200;
+    --z-overlay: 300;
+    --z-modal: 400;
+    --z-toast: 500;
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  }
+
+  /* ── Dark Theme ── */
+  [data-theme="dark"] {
+    --bg:       oklch(0.08 0 0);
+    --surface:  oklch(0.13 0.006 68);
+    --surface-raised: oklch(0.17 0.008 68);
+    --ink:      oklch(0.93 0.005 68);
+    --ink-dim:  oklch(0.65 0.008 68);
+    --ink-muted: oklch(0.48 0.006 68);
+    --primary:  oklch(0.72 0.16 65);
+    --primary-glow: oklch(0.72 0.16 65 / 0.35);
+    --primary-subtle: oklch(0.72 0.16 65 / 0.12);
+    --accent:   oklch(0.55 0.16 340);
+    --accent-subtle: oklch(0.55 0.16 340 / 0.15);
+    --common:   oklch(0.60 0.08 180);
+    --uncommon: oklch(0.58 0.12 250);
+    --rare:     oklch(0.52 0.16 300);
+    --epic:     oklch(0.50 0.18 25);
+    --legendary: oklch(0.55 0.20 55);
+    --mythic:   oklch(0.72 0.18 80);
+    --card-border: oklch(1 0 0 / 0.06);
+    --shadow-heavy: oklch(0 0 0 / 0.45);
+  }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--ink);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    padding: 1rem;
+    position: relative;
+  }
+
+  /* ── Mountain Background ── */
+  .mountains {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-behind);
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .mountains svg {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    min-width: 600px;
+    max-width: 1200px;
+    height: auto;
+  }
+
+  /* ── Top Bar ── */
+  .top-bar {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0 1rem;
+    gap: 0.75rem;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .title {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
+  .top-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  /* ── Theme Toggle ── */
+  .theme-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--ink-dim);
+    cursor: pointer;
+    transition: color 0.2s, background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .theme-btn:hover { color: var(--ink); background: var(--surface); }
+  .theme-btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+  .theme-btn svg { width: 1.125rem; height: 1.125rem; }
+  .theme-btn .icon-sun { display: none; }
+  .theme-btn .icon-moon { display: block; }
+  [data-theme="dark"] .theme-btn .icon-sun { display: block; }
+  [data-theme="dark"] .theme-btn .icon-moon { display: none; }
+
+  /* ── Stats ── */
+  .stat {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--ink-dim);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .stat-value {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* ── Toggle ── */
+  .toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .toggle-label:hover { color: var(--ink-dim); }
+  .toggle-track {
+    width: 2rem;
+    height: 1.125rem;
+    border-radius: 99px;
+    background: var(--surface-raised);
+    position: relative;
+    transition: background 0.2s;
+  }
+  .toggle-track.active { background: var(--primary-subtle); }
+  .toggle-thumb {
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 50%;
+    background: var(--ink-muted);
+    position: absolute;
+    top: 0.125rem;
+    left: 0.125rem;
+    transition: transform 0.2s var(--ease-out-quart), background 0.2s;
+  }
+  .toggle-track.active .toggle-thumb {
+    transform: translateX(0.875rem);
+    background: var(--primary);
+  }
+  .toggle-checkbox { position: absolute; opacity: 0; pointer-events: none; }
+
+  /* ── Main Area ── */
+  .main {
+    flex: 1;
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    min-height: 0;
+    padding: 0.5rem 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Empty State ── */
+  .empty-state {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+  }
+  .empty-state.hidden { display: none; }
+
+  .deck-illustration {
+    position: relative;
+    width: 140px;
+    height: 180px;
+  }
+  .deck-card {
+    position: absolute;
+    width: 120px;
+    height: 168px;
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    border: 1px solid var(--card-border);
+    left: 50%;
+    transform: translateX(-50%);
+    transition: transform 0.4s var(--ease-out-expo);
+  }
+  .deck-card:nth-child(1) { top: 0;  z-index: 3; }
+  .deck-card:nth-child(2) { top: 6px;  z-index: 2; transform: translateX(-50%) rotate(-2deg); }
+  .deck-card:nth-child(3) { top: 12px; z-index: 1; transform: translateX(-50%) rotate(3deg); }
+
+  .remaining-badge {
+    font-size: 0.8125rem;
+    color: var(--ink-dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .remaining-badge strong { color: var(--ink); font-weight: 600; }
+
+  /* ── Button ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 0.875rem 2rem;
+    border-radius: 99px;
+    transition: transform 0.15s var(--ease-out-quart),
+                box-shadow 0.2s var(--ease-out-quart),
+                background 0.2s;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: var(--primary);
+    color: oklch(0.12 0.01 68);
+    box-shadow: 0 4px 24px var(--primary-glow);
+  }
+  [data-theme="dark"] .btn-primary { color: oklch(0.12 0.01 68); }
+  .btn-primary:hover {
+    box-shadow: 0 6px 32px var(--primary-glow);
+  }
+  .btn-primary:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-dim);
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  .btn-ghost:hover { color: var(--ink); background: var(--surface); }
+  .btn-ghost:focus-visible {
+    outline: 2px solid var(--ink-dim);
+    outline-offset: 2px;
+  }
+
+  /* ── Active Card ── */
+  .card-stage {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0rem;
+    transition: opacity 0.3s, transform 0.3s var(--ease-out-expo);
+  }
+  .card-stage.hidden { display: none; }
+  .card-stage.animate-in {
+    animation: cardEnter 0.5s var(--ease-out-expo) both;
+  }
+  .card-stage.animate-out {
+    animation: cardExit 0.35s var(--ease-out-quart) both;
+  }
+
+  @keyframes cardEnter {
+    from { opacity: 0; transform: translateY(24px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes cardExit {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to   { opacity: 0; transform: translateY(-20px) scale(0.96); }
+  }
+
+  .card {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    padding: 2rem 1.5rem 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Rarity glow on card */
+  .card[data-rarity="mythic"] {
+    box-shadow: 0 0 0 1px oklch(0.72 0.18 80 / 0.25),
+                0 0 80px oklch(0.72 0.18 80 / 0.08);
+  }
+  .card[data-rarity="legendary"] {
+    box-shadow: 0 0 0 1px oklch(0.55 0.20 55 / 0.2),
+                0 0 48px oklch(0.55 0.20 55 / 0.06);
+  }
+
+  .card-rarity {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .rarity-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .rarity-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .card-question {
+    font-family: var(--font-display);
+    font-size: clamp(1.25rem, 4vw, 1.5rem);
+    font-weight: 400;
+    line-height: 1.45;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+
+  .card-category {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .card-actions {
+    display: flex;
+    gap: 0.625rem;
+    margin-top: 0.25rem;
+  }
+  .card-actions .btn { flex: 1; }
+
+  .btn-answered {
+    background: var(--surface-raised);
+    color: var(--ink);
+    box-shadow: none;
+    font-weight: 500;
+  }
+  .btn-answered:hover { background: var(--bg); }
+
+  .btn-skip {
+    background: transparent;
+    color: var(--ink-muted);
+    box-shadow: none;
+    font-weight: 500;
+    font-size: 0.875rem;
+    padding: 0.625rem 1.25rem;
+    flex: 0;
+  }
+  .btn-skip:hover { color: var(--ink-dim); }
+
+  .score-pop {
+    position: fixed;
+    pointer-events: none;
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--primary);
+    z-index: var(--z-toast);
+    animation: scoreFloat 1.2s var(--ease-out-expo) both;
+  }
+  @keyframes scoreFloat {
+    0%   { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-64px) scale(1.3); }
+  }
+
+  /* ── Discard Drawer ── */
+  .discard-area {
+    width: 100%;
+    max-width: 480px;
+    flex-shrink: 0;
+    padding: 0.5rem 0 1rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .discard-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    background: none;
+    border: none;
+    color: var(--ink-muted);
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0.625rem;
+    transition: color 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .discard-toggle:hover { color: var(--ink-dim); }
+  .discard-toggle:focus-visible {
+    outline: 2px solid var(--ink-dim);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  .discard-chevron {
+    width: 14px;
+    height: 14px;
+    transition: transform 0.3s var(--ease-out-quart);
+  }
+  .discard-chevron.open { transform: rotate(180deg); }
+
+  .discard-pile {
+    display: none;
+    max-height: 30vh;
+    overflow-y: auto;
+    padding: 0.25rem 0.25rem 0.5rem;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface-raised) transparent;
+  }
+  .discard-pile.open { display: block; }
+
+  .discard-item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.8125rem;
+    color: var(--ink-dim);
+    animation: discardEnter 0.3s var(--ease-out-quart) both;
+  }
+  .discard-item:nth-child(1) { animation-delay: 0s; }
+  .discard-item:nth-child(2) { animation-delay: 0.03s; }
+  .discard-item:nth-child(3) { animation-delay: 0.06s; }
+  .discard-item:nth-child(4) { animation-delay: 0.09s; }
+  .discard-item:nth-child(5) { animation-delay: 0.12s; }
+
+  @keyframes discardEnter {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .discard-item:hover { background: var(--surface); }
+  .discard-item-dot { width: 0.375rem; height: 0.375rem; border-radius: 50%; flex-shrink: 0; }
+  .discard-item-text {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .discard-item-score {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .discard-empty {
+    text-align: center;
+    font-size: 0.8125rem;
+    color: var(--ink-muted);
+    padding: 1rem;
+  }
+
+  /* ── Game Over ── */
+  .game-over {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  .game-over.hidden { display: none; }
+  .game-over-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.25rem;
+  }
+  .game-over-heading {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .game-over-sub {
+    font-size: 0.9375rem;
+    color: var(--ink-dim);
+    line-height: 1.5;
+  }
+  .final-scores {
+    display: flex;
+    gap: 2rem;
+    margin: 0.5rem 0;
+  }
+  .final-score {
+    text-align: center;
+  }
+  .final-score-value {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 500;
+  }
+  .final-score-label {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface-raised);
+    color: var(--ink);
+    padding: 0.625rem 1.25rem;
+    border-radius: 99px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    z-index: var(--z-toast);
+    box-shadow: 0 8px 32px var(--shadow-heavy);
+    animation: toastIn 0.3s var(--ease-out-quart),
+               toastOut 0.3s var(--ease-out-quart) 1.7s both;
+    pointer-events: none;
+  }
+  @keyframes toastIn  { from { opacity: 0; transform: translateX(-50%) translateY(12px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+  @keyframes toastOut { from { opacity: 1; transform: translateX(-50%) translateY(0); } to { opacity: 0; transform: translateX(-50%) translateY(-8px); } }
+
+  /* ── Question Editor Modal ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: oklch(0 0 0 / 0.4);
+    z-index: var(--z-modal);
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    -webkit-overflow-scrolling: touch;
+  }
+  [data-theme="dark"] .modal-overlay {
+    background: oklch(0 0 0 / 0.55);
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal-sheet {
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    background: var(--bg);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: 1.5rem 1.5rem 2rem;
+    overflow-y: auto;
+    animation: sheetUp 0.35s var(--ease-out-expo) both;
+    scrollbar-width: thin;
+    scrollbar-color: var(--surface-raised) transparent;
+  }
+  @keyframes sheetUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .modal-sheet { animation: none; }
+  }
+
+  .modal-handle {
+    width: 2.5rem;
+    height: 0.25rem;
+    border-radius: 99px;
+    background: var(--ink-muted);
+    margin: 0 auto 1.25rem;
+    opacity: 0.4;
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: 500;
+  }
+  .modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--ink-dim);
+    cursor: pointer;
+    font-size: 1.25rem;
+    transition: background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .modal-close:hover { background: var(--surface); }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  .form-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ink-dim);
+    margin-bottom: 0.375rem;
+  }
+  .form-input,
+  .form-select {
+    width: 100%;
+    font-family: var(--font-body);
+    font-size: 0.9375rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--card-border);
+    background: var(--surface);
+    color: var(--ink);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .form-input:focus,
+  .form-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-subtle);
+  }
+  .form-input::placeholder { color: var(--ink-muted); }
+
+  .form-select-wrap {
+    position: relative;
+  }
+  .form-select-wrap::after {
+    content: '';
+    position: absolute;
+    right: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    background: var(--ink-muted);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    pointer-events: none;
+  }
+  .form-select {
+    padding-right: 2rem;
+    cursor: pointer;
+  }
+
+  .form-row {
+    display: flex;
+    gap: 0.75rem;
+  }
+  .form-row .form-group { flex: 1; }
+
+  .btn-add {
+    width: 100%;
+    background: var(--primary);
+    color: oklch(0.12 0.01 68);
+    border: none;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    padding: 0.8125rem;
+    border-radius: 99px;
+    cursor: pointer;
+    transition: transform 0.15s var(--ease-out-quart);
+    margin-top: 0.25rem;
+  }
+  [data-theme="dark"] .btn-add { color: oklch(0.12 0.01 68); }
+  .btn-add:active { transform: scale(0.97); }
+  .btn-add:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn-add:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  .custom-questions {
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--card-border);
+    padding-top: 1rem;
+  }
+  .custom-questions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.625rem;
+  }
+  .custom-questions-count {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+    font-weight: 500;
+  }
+  .custom-list { display: flex; flex-direction: column; gap: 0.375rem; }
+  .custom-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    font-size: 0.8125rem;
+  }
+  .custom-item-text {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--ink-dim);
+  }
+  .custom-item-rarity {
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    flex-shrink: 0;
+  }
+  .custom-item-delete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--ink-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    flex-shrink: 0;
+    transition: color 0.2s, background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .custom-item-delete:hover { color: oklch(0.55 0.18 25); background: var(--accent-subtle); }
+  .custom-empty {
+    text-align: center;
+    font-size: 0.8125rem;
+    color: var(--ink-muted);
+    padding: 1rem;
+  }
+
+  /* ── Pack UI in Modal ── */
+  .pack-card {
+    background: var(--surface);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+  }
+  .pack-header {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 0.875rem;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s;
+  }
+  .pack-header:hover { background: oklch(0 0 0 / 0.02); }
+  [data-theme="dark"] .pack-header:hover { background: oklch(1 0 0 / 0.03); }
+  .pack-name {
+    flex: 1;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .pack-count {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .pack-chevron {
+    width: 14px;
+    height: 14px;
+    color: var(--ink-muted);
+    flex-shrink: 0;
+    transition: transform 0.25s var(--ease-out-quart);
+  }
+  .pack-chevron.open { transform: rotate(180deg); }
+
+  .pack-toggle {
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 1.25rem;
+    border-radius: 99px;
+    border: none;
+    background: var(--surface-raised);
+    position: relative;
+    cursor: pointer;
+    transition: background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pack-toggle.on { background: var(--primary-subtle); }
+  .pack-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .pack-toggle-knob {
+    width: 0.9375rem;
+    height: 0.9375rem;
+    border-radius: 50%;
+    background: var(--ink-muted);
+    position: absolute;
+    top: 0.15625rem;
+    left: 0.15625rem;
+    transition: transform 0.2s var(--ease-out-quart), background 0.2s;
+  }
+  .pack-toggle.on .pack-toggle-knob {
+    transform: translateX(1rem);
+    background: var(--primary);
+  }
+
+  .pack-body {
+    display: none;
+    padding: 0 0.875rem 0.75rem;
+  }
+  .pack-body.open { display: block; }
+
+  .pack-questions { margin-bottom: 0.625rem; }
+  .pack-q {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    margin-bottom: 0.25rem;
+  }
+  .pack-q-text {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--ink-dim);
+  }
+  .pack-q-rarity {
+    font-size: 0.5625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    flex-shrink: 0;
+  }
+  .pack-q-del {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.375rem;
+    height: 1.375rem;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--ink-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    flex-shrink: 0;
+    transition: color 0.2s, background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pack-q-del:hover { color: oklch(0.55 0.18 25); background: var(--accent-subtle); }
+  .pack-q-empty {
+    font-size: 0.75rem;
+    color: var(--ink-muted);
+    text-align: center;
+    padding: 0.5rem;
+    font-style: italic;
+  }
+
+  .pack-add-form {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+  .pack-add-input {
+    flex: 1;
+    font-family: var(--font-body);
+    font-size: 0.8125rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--card-border);
+    background: var(--bg);
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .pack-add-input:focus { border-color: var(--primary); }
+  .pack-add-input::placeholder { color: var(--ink-muted); }
+
+  .pack-add-meta {
+    display: flex;
+    gap: 0.375rem;
+    flex-shrink: 0;
+  }
+  .pack-add-meta select {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    padding: 0.4375rem 1.25rem 0.4375rem 0.5rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--card-border);
+    background: var(--bg);
+    color: var(--ink-dim);
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%23666' d='M0 2l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 4px center;
+    transition: border-color 0.2s;
+  }
+  .pack-add-meta select:focus { border-color: var(--primary); }
+
+  .pack-add-btn {
+    flex-shrink: 0;
+    border: none;
+    background: var(--primary);
+    color: oklch(0.12 0.01 68);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  [data-theme="dark"] .pack-add-btn { color: oklch(0.12 0.01 68); }
+  .pack-add-btn:active { transform: scale(0.97); }
+  .pack-add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Base game tag ── */
+  .pack-base-tag {
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-muted);
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  /* ── Reduced Motion ── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+    .card-stage.animate-in,
+    .card-stage.animate-out { animation: none; }
+    .score-pop { display: none; }
+  }
+
+  /* ── Responsive ── */
+  @media (min-width: 520px) {
+    body { padding: 2rem; }
+    .card { padding: 2.25rem 2rem 2rem; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Mountain Background -->
+  <div class="mountains" aria-hidden="true">
+    <svg viewBox="0 0 1200 500" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Furthest ridge — lightest, most faded -->
+      <path d="M0 500 L0 340 Q80 290 160 310 Q280 260 380 300 Q480 240 560 280 Q660 220 740 260 Q840 230 920 270 Q1000 240 1080 280 Q1160 250 1200 290 L1200 500 Z"
+            fill="oklch(0.72 0.16 65 / 0.06)" />
+      <!-- Mid ridge -->
+      <path d="M0 500 L0 380 Q100 340 200 370 Q320 310 420 360 Q540 300 640 350 Q740 310 820 350 Q940 310 1040 360 Q1120 330 1200 370 L1200 500 Z"
+            fill="oklch(0.72 0.16 65 / 0.10)" />
+      <!-- Closest ridge — slightly more present -->
+      <path d="M0 500 L0 420 Q120 390 240 430 Q380 370 500 420 Q620 380 740 420 Q860 390 980 430 Q1080 400 1200 440 L1200 500 Z"
+            fill="oklch(0.72 0.16 65 / 0.14)" />
+    </svg>
+  </div>
+
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <h1 class="title">Couple Questions</h1>
+    <div class="top-actions">
+      <div class="stat" id="scoreDisplay">
+        <span>Score</span>
+        <span class="stat-value" id="scoreValue">0</span>
+      </div>
+      <label class="toggle-label" title="Toggle score tracking">
+        <input type="checkbox" class="toggle-checkbox" id="scoreToggle" checked>
+        <span class="toggle-track" id="scoreTrack">
+          <span class="toggle-thumb"></span>
+        </span>
+      </label>
+      <button class="theme-btn" id="editBtn" title="Edit questions" aria-label="Edit questions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1.125rem;height:1.125rem">
+          <path d="M12 20h9"/>
+          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+        </svg>
+      </button>
+      <button class="theme-btn" id="themeToggle" title="Toggle theme" aria-label="Switch to dark mode">
+        <!-- Sun icon (shown in dark mode → switch to light) -->
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+        <!-- Moon icon (shown in light mode → switch to dark) -->
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Game Area -->
+  <main class="main" id="mainArea">
+    <!-- Empty / Draw State -->
+    <div class="empty-state" id="emptyState">
+      <div class="deck-illustration" aria-hidden="true">
+        <div class="deck-card"></div>
+        <div class="deck-card"></div>
+        <div class="deck-card"></div>
+      </div>
+      <p class="remaining-badge" id="remainingBadge">
+        <strong id="remainingCount">108</strong> questions in the deck
+      </p>
+      <button class="btn btn-primary" id="drawBtn" autofocus>
+        Draw a Card
+      </button>
+    </div>
+
+    <!-- Active Card -->
+    <div class="card-stage hidden" id="cardStage">
+      <div class="card" id="activeCard">
+        <div class="card-rarity">
+          <span class="rarity-dot" id="rarityDot"></span>
+          <span class="rarity-label" id="rarityLabel"></span>
+        </div>
+        <p class="card-question" id="cardQuestion"></p>
+        <p class="card-category" id="cardCategory"></p>
+        <div class="card-actions">
+          <button class="btn btn-ghost btn-skip" id="skipBtn">Skip</button>
+          <button class="btn btn-answered" id="answeredBtn">Answered</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Over -->
+    <div class="game-over hidden" id="gameOver">
+      <div class="game-over-icon">🕯️</div>
+      <h2 class="game-over-heading">Deck's empty</h2>
+      <p class="game-over-sub">
+        You made it through every question.<br>Here's to many more conversations.
+      </p>
+      <div class="final-scores" id="finalScores"></div>
+      <button class="btn btn-primary" id="resetBtn">Play Again</button>
+    </div>
+  </main>
+
+  <!-- Discard Pile -->
+  <footer class="discard-area">
+    <button class="discard-toggle" id="discardToggle" aria-expanded="false">
+      <span>Discard pile</span>
+      <span class="stat-value" id="discardCount">0</span>
+      <svg class="discard-chevron" id="discardChevron" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <path d="M3 5l4 4 4-4"/>
+      </svg>
+    </button>
+    <div class="discard-pile" id="discardPile" role="region" aria-label="Discarded questions"></div>
+  </footer>
+
+  <!-- Question Packs Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-sheet">
+      <div class="modal-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <h2 class="modal-title">Question Packs</h2>
+        <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
+      </div>
+
+      <!-- Pack list -->
+      <div id="packList"></div>
+
+      <!-- New pack button -->
+      <button class="btn btn-ghost" id="newPackBtn" style="width:100%;margin-top:0.75rem">
+        + New Pack
+      </button>
+
+      <!-- New pack form (hidden) -->
+      <form id="newPackForm" autocomplete="off" style="display:none;margin-top:0.75rem">
+        <div class="form-group" style="margin-bottom:0.5rem">
+          <input class="form-input" id="newPackName" type="text" placeholder="Pack name..." maxlength="60" required>
+        </div>
+        <button class="btn-add" type="submit">Create Pack</button>
+      </form>
+    </div>
+  </div>
+
+<script>
+  /* ── Question Data ── */
+  const QUESTIONS = [];
+
+  /* ── Rarity Config ── */
+  const RARITY = {
+    common:    { label: 'Common',    color: 'var(--common)',    points: 1 },
+    uncommon:  { label: 'Uncommon',  color: 'var(--uncommon)',  points: 2 },
+    rare:      { label: 'Rare',      color: 'var(--rare)',      points: 3 },
+    epic:      { label: 'Epic',      color: 'var(--epic)',      points: 5 },
+    legendary: { label: 'Legendary', color: 'var(--legendary)', points: 10 },
+    mythic:    { label: 'Mythic',    color: 'var(--mythic)',    points: 20 },
+  };
+
+  /* ── Parse game data ── */
+  function parseQuestions() {
+    const raw = `COMMON QUESTIONS
+1. What was your favorite childhood TV show?
+2. If you could instantly master one skill, what would it be?
+3. What is your dream vacation?
+4. What food could you eat every week and never get tired of?
+5. What is a small thing that always makes you smile?
+6. If you won $10 million tomorrow, what is the first thing you'd buy?
+7. What is your favorite memory from high school?
+8. What is your ideal Saturday?
+9. What movie can you watch repeatedly?
+10. What animal best represents your personality?
+
+UNCOMMON QUESTIONS
+1. What is a risk you took that paid off?
+2. What is something you've changed your mind about in the last five years?
+3. Who had the biggest positive influence on your life?
+4. What is a hobby you've always wanted to try?
+5. What is one thing people misunderstand about you?
+6. What was your first impression of me?
+7. What is one thing you wish more people knew about you?
+8. What is the most memorable trip you've ever taken?
+9. What is a life lesson you learned the hard way?
+10. What was your happiest year and why?
+
+RARE QUESTIONS
+1. When do you feel most loved?
+2. What is something I do that makes your day better?
+3. What is one thing we should do more often together?
+4. What is your favorite memory of us?
+5. What makes you feel appreciated?
+6. What is a tradition you'd like us to start?
+7. What is something you've always wanted us to try together?
+8. What do you think we're best at as a couple?
+9. What is one thing you admire about me that I may not realize?
+10. What is a goal you'd like us to achieve together?
+
+EPIC QUESTIONS
+1. What moment changed your life the most?
+2. What fear has shaped your decisions the most?
+3. What do you hope people remember about you?
+4. What part of your younger self do you miss?
+5. What is something you are still figuring out about yourself?
+6. What achievement are you most proud of?
+7. What would your perfect life look like in ten years?
+8. What challenge taught you the most about yourself?
+9. What belief guides your life?
+10. What is something you wish you worried less about?
+
+LEGENDARY QUESTIONS
+1. What is something you've never told many people?
+2. What is your biggest insecurity?
+3. What do you think is your greatest strength and greatest weakness?
+4. When have you felt most alone?
+5. What is a dream you've quietly given up on?
+6. What do you think your future self would thank you for?
+7. What is something you wish people understood about your struggles?
+8. What part of our relationship are you most grateful for?
+9. What is a question you've always wanted someone to ask you?
+10. What truth about yourself took the longest to accept?
+
+FUTURE US - COMMON
+1. What is one place you'd love for us to visit together?
+2. What is a hobby we could start as a couple?
+3. What would your ideal date night look like five years from now?
+4. What is one thing you'd like us to do more often as a family?
+5. What is something small we could do every week that would make life better?
+6. If we had a free weekend with no responsibilities, what would you want to do?
+7. What is one holiday tradition you'd like to create?
+8. What would our dream backyard include?
+9. What is a skill you'd like us both to learn?
+10. What kind of pets would you want in the future?
+
+FUTURE US - UNCOMMON
+1. What is a family tradition from your childhood that you'd like to continue?
+2. What tradition would you like to create from scratch?
+3. What is one thing you hope our children remember about growing up?
+4. What is a goal you'd like us to accomplish in the next two years?
+5. What would our dream family vacation look like?
+6. If we moved anywhere in the world for a year, where would you choose?
+7. What kind of adventures should we prioritize while we're younger?
+8. What project would be fun for us to work on together?
+9. What is one thing we should start saving for now?
+10. What does a successful year for us look like?
+
+FUTURE US - RARE
+1. What values do you most want our children to learn from us?
+2. What is something you hope never changes about our relationship?
+3. What kind of grandparents do you hope we'll become someday?
+4. What do you think our biggest adventure together has yet to be?
+5. What is one dream you've never seriously discussed with me?
+6. What would make you feel that we've truly built a great life together?
+7. What kind of home would make you happiest?
+8. What do you think we'll laugh about when we're 80?
+9. What challenge do you think we'll overcome together in the future?
+10. What is one thing you hope we always make time for?
+
+FUTURE US - EPIC
+1. If we were celebrating our 50th anniversary, what would you hope we could say about our life together?
+2. What do you think is the most important thing we're building right now?
+3. What sacrifices are worth making for our future?
+4. What kind of legacy would you like our family to leave behind?
+5. What do you hope our children learn from watching our marriage?
+6. What are we currently taking for granted that we'll appreciate later?
+7. What dream feels unrealistic today but might be possible someday?
+8. What would our perfect retirement look like?
+9. How do you think we'll be different in ten years?
+10. What is one future goal that scares you because it matters so much?
+
+FUTURE US - LEGENDARY
+1. What is your biggest hope for our life together?
+2. What is your biggest fear about the future?
+3. If we could guarantee one thing about our future, what would you choose?
+4. What do you hope people say about our relationship after we're gone?
+5. What part of our future are you most excited about?
+6. What challenge do you think will test us the most?
+7. What do you think love will look like for us in 30 years?
+8. What would make you feel that your life was well-lived?
+9. What promise do you hope we always keep to each other?
+10. What is a dream you hope we never stop pursuing together?
+
+MYTHIC QUESTIONS
+1. We are both 90 years old, sitting on a porch together. What stories are we telling?
+2. If we could design our perfect future from scratch, what would it look like?
+3. What is something you hope we accomplish together that neither of us could accomplish alone?
+4. Imagine our children describing us 30 years from now. What do you hope they say?
+5. What does a life with no regrets look like for us?
+6. What is the greatest adventure we haven't started yet?
+7. If we could send one message to ourselves 20 years in the future, what would it be?
+8. What are we building together that will outlast us?`;
+
+    const sections = raw.split(/\n(?=[A-Z][A-Z ]+(?:QUESTIONS|US - [A-Z]+))/);
+    const categoryMap = {
+      'COMMON QUESTIONS':    { rarity: 'common',    category: 'General' },
+      'UNCOMMON QUESTIONS':  { rarity: 'uncommon',  category: 'General' },
+      'RARE QUESTIONS':      { rarity: 'rare',      category: 'General' },
+      'EPIC QUESTIONS':      { rarity: 'epic',      category: 'General' },
+      'LEGENDARY QUESTIONS': { rarity: 'legendary', category: 'General' },
+      'FUTURE US - COMMON':    { rarity: 'common',    category: 'Future Us' },
+      'FUTURE US - UNCOMMON':  { rarity: 'uncommon',  category: 'Future Us' },
+      'FUTURE US - RARE':      { rarity: 'rare',      category: 'Future Us' },
+      'FUTURE US - EPIC':      { rarity: 'epic',      category: 'Future Us' },
+      'FUTURE US - LEGENDARY': { rarity: 'legendary', category: 'Future Us' },
+      'MYTHIC QUESTIONS':    { rarity: 'mythic',    category: 'General' },
+    };
+
+    for (const section of sections) {
+      const lines = section.trim().split('\n');
+      const header = lines[0].trim();
+      const config = categoryMap[header];
+      if (!config) continue;
+
+      for (let i = 1; i < lines.length; i++) {
+        const match = lines[i].match(/^\d+\.\s+(.+)/);
+        if (match) {
+          QUESTIONS.push({
+            text: match[1],
+            rarity: config.rarity,
+            category: config.category,
+          });
+        }
+      }
+    }
+  }
+
+  /* ── Game State ── */
+  let deck = [];
+  let discard = [];
+  let currentCard = null;
+  let score = 0;
+  let scoreEnabled = true;
+  let questionsAnswered = 0;
+
+  /* ── Theme ── */
+  function getTheme() {
+    return document.documentElement.getAttribute('data-theme') || 'light';
+  }
+
+  function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('cqg-theme', theme);
+    updateThemeLabel();
+  }
+
+  function toggleTheme() {
+    setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+  }
+
+  function updateThemeLabel() {
+    const isDark = getTheme() === 'dark';
+    $themeToggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+  }
+
+  function loadTheme() {
+    const saved = localStorage.getItem('cqg-theme');
+    if (saved === 'dark' || saved === 'light') {
+      setTheme(saved);
+    }
+    /* default is light (already set on <html>) */
+  }
+
+  /* ── Question Packs (server-side) ── */
+  const API_BASE = '/api/packs';
+  let questionPacks = [];
+
+  async function loadPacks() {
+    try {
+      const res = await fetch(API_BASE);
+      if (res.ok) questionPacks = await res.json();
+    } catch (e) { questionPacks = []; }
+  }
+
+  async function createPack(name) {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name }),
+    });
+    if (res.ok) {
+      const pack = await res.json();
+      questionPacks.push(pack);
+      return pack;
+    }
+    return null;
+  }
+
+  async function togglePack(packId, enabled) {
+    const res = await fetch(`${API_BASE}/${packId}`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ enabled }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      const idx = questionPacks.findIndex(p => p.id === packId);
+      if (idx !== -1) questionPacks[idx] = updated;
+      return true;
+    }
+    return false;
+  }
+
+  async function deletePack(packId) {
+    const res = await fetch(`${API_BASE}/${packId}`, { method: 'DELETE' });
+    if (res.ok) {
+      questionPacks = questionPacks.filter(p => p.id !== packId);
+      return true;
+    }
+    return false;
+  }
+
+  async function addQuestionToPack(packId, text, rarity, category) {
+    const res = await fetch(`${API_BASE}/${packId}/questions`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ text, rarity, category }),
+    });
+    if (res.ok) {
+      const q = await res.json();
+      const pack = questionPacks.find(p => p.id === packId);
+      if (pack) pack.questions.push(q);
+      return q;
+    }
+    return null;
+  }
+
+  async function deleteQuestionFromPack(packId, qid) {
+    const res = await fetch(`${API_BASE}/${packId}/questions/${qid}`, { method: 'DELETE' });
+    if (res.ok) {
+      const pack = questionPacks.find(p => p.id === packId);
+      if (pack) pack.questions = pack.questions.filter(q => q.id !== qid);
+      return true;
+    }
+    return false;
+  }
+
+  function getAllQuestions() {
+    let extra = [];
+    for (const pack of questionPacks) {
+      if (!pack.enabled) continue;
+      for (const q of pack.questions) {
+        extra.push({
+          text: q.text,
+          rarity: q.rarity,
+          category: q.category || 'Custom',
+          pack: pack.name,
+        });
+      }
+    }
+    return extra.length === 0 ? [...QUESTIONS] : [...QUESTIONS, ...extra];
+  }
+
+  function getEnabledPackCount() {
+    return questionPacks.filter(p => p.enabled).length;
+  }
+
+  /* ── Modal / Pack UI ── */
+  let openPackId = null;
+
+  function openModal() {
+    renderPacks();
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('open');
+    openPackId = null;
+  }
+
+  function renderPacks() {
+    const container = document.getElementById('packList');
+    const totalCustom = questionPacks.reduce((s, p) => s + p.questions.length, 0);
+
+    /* Base game card (always shown, always on) */
+    let html = `
+      <div class="pack-card">
+        <div class="pack-header">
+          <span class="pack-toggle on" style="cursor:default;opacity:0.6">
+            <span class="pack-toggle-knob" style="background:var(--primary)"></span>
+          </span>
+          <span class="pack-name">Base Game</span>
+          <span class="pack-base-tag">Built-in</span>
+          <span class="pack-count">108</span>
+        </div>
+      </div>
+    `;
+
+    /* Custom packs */
+    for (const pack of questionPacks) {
+      const isOpen = openPackId === pack.id;
+      const rCount = pack.questions.length;
+      html += `
+        <div class="pack-card">
+          <div class="pack-header" data-pack-id="${pack.id}">
+            <button class="pack-toggle ${pack.enabled ? 'on' : ''}" data-toggle="${pack.id}" aria-label="${pack.enabled ? 'Disable' : 'Enable'} pack"></button>
+            <span class="pack-name">${escapeHTML(pack.name)}</span>
+            <span class="pack-count">${rCount} ${rCount === 1 ? 'question' : 'questions'}</span>
+            <svg class="pack-chevron ${isOpen ? 'open' : ''}" data-chevron="${pack.id}" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+          </div>
+          <div class="pack-body ${isOpen ? 'open' : ''}">
+            <div class="pack-questions">
+              ${rCount === 0 ? '<p class="pack-q-empty">No questions yet</p>' : ''}
+              ${pack.questions.map(q => {
+                const r = RARITY[q.rarity];
+                return `<div class="pack-q">
+                  <span class="pack-q-text" title="${escapeHTML(q.text)}">${escapeHTML(q.text)}</span>
+                  <span class="pack-q-rarity" style="color:${r.color}">${r.label}</span>
+                  <button class="pack-q-del" data-pack="${pack.id}" data-qid="${q.id}" aria-label="Delete question">&times;</button>
+                </div>`;
+              }).join('')}
+            </div>
+            <form class="pack-add-form" data-pack-form="${pack.id}" autocomplete="off">
+              <input class="pack-add-input" type="text" placeholder="New question..." maxlength="300" required>
+              <div class="pack-add-meta">
+                <select>
+                  ${Object.entries(RARITY).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('')}
+                </select>
+                <select>
+                  <option value="General">General</option>
+                  <option value="Future Us">Future Us</option>
+                  <option value="Custom">Custom</option>
+                </select>
+              </div>
+              <button class="pack-add-btn" type="submit">Add</button>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
+    bindPackEvents();
+  }
+
+  function bindPackEvents() {
+    /* Toggle pack on/off */
+    document.querySelectorAll('[data-toggle]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = parseInt(btn.dataset.toggle);
+        const pack = questionPacks.find(p => p.id === id);
+        if (!pack) return;
+        await togglePack(id, !pack.enabled);
+        renderPacks();
+      });
+    });
+
+    /* Expand/collapse pack */
+    document.querySelectorAll('.pack-header[data-pack-id]').forEach(hdr => {
+      hdr.addEventListener('click', (e) => {
+        const id = parseInt(hdr.dataset.packId);
+        openPackId = openPackId === id ? null : id;
+        renderPacks();
+      });
+    });
+
+    /* Add question to pack */
+    document.querySelectorAll('[data-pack-form]').forEach(form => {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const packId = parseInt(form.dataset.packForm);
+        const input = form.querySelector('input');
+        const selects = form.querySelectorAll('select');
+        const text = input.value.trim();
+        if (!text) return;
+        const rarity = selects[0].value;
+        const category = selects[1].value;
+        await addQuestionToPack(packId, text, rarity, category);
+        input.value = '';
+        renderPacks();
+      });
+    });
+
+    /* Delete question from pack */
+    document.querySelectorAll('.pack-q-del').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const packId = parseInt(btn.dataset.pack);
+        const qid = parseInt(btn.dataset.qid);
+        await deleteQuestionFromPack(packId, qid);
+        renderPacks();
+      });
+    });
+  }
+
+  /* ── DOM ── */
+  const $emptyState   = document.getElementById('emptyState');
+  const $remainingCount = document.getElementById('remainingCount');
+  const $drawBtn      = document.getElementById('drawBtn');
+  const $cardStage    = document.getElementById('cardStage');
+  const $activeCard   = document.getElementById('activeCard');
+  const $rarityDot    = document.getElementById('rarityDot');
+  const $rarityLabel  = document.getElementById('rarityLabel');
+  const $cardQuestion = document.getElementById('cardQuestion');
+  const $cardCategory = document.getElementById('cardCategory');
+  const $answeredBtn  = document.getElementById('answeredBtn');
+  const $skipBtn      = document.getElementById('skipBtn');
+  const $gameOver     = document.getElementById('gameOver');
+  const $finalScores  = document.getElementById('finalScores');
+  const $resetBtn     = document.getElementById('resetBtn');
+  const $discardToggle = document.getElementById('discardToggle');
+  const $discardChevron = document.getElementById('discardChevron');
+  const $discardPile  = document.getElementById('discardPile');
+  const $discardCount = document.getElementById('discardCount');
+  const $scoreValue   = document.getElementById('scoreValue');
+  const $scoreDisplay = document.getElementById('scoreDisplay');
+  const $scoreToggle  = document.getElementById('scoreToggle');
+  const $scoreTrack   = document.getElementById('scoreTrack');
+  const $themeToggle  = document.getElementById('themeToggle');
+  const $editBtn      = document.getElementById('editBtn');
+  const $modalOverlay = document.getElementById('modalOverlay');
+  const $modalClose   = document.getElementById('modalClose');
+  const $newPackForm = document.getElementById('newPackForm');
+  const $newPackName = document.getElementById('newPackName');
+  const $mainArea     = document.getElementById('mainArea');
+
+  /* ── Init ── */
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function resetGame() {
+    deck = shuffle(getAllQuestions());
+    discard = [];
+    currentCard = null;
+    score = 0;
+    questionsAnswered = 0;
+    updateUI();
+    showEmptyState();
+    $gameOver.classList.add('hidden');
+    $discardPile.innerHTML = '';
+    $discardPile.classList.remove('open');
+    $discardChevron.classList.remove('open');
+    $discardToggle.setAttribute('aria-expanded', 'false');
+    $drawBtn.focus();
+  }
+
+  function showEmptyState() {
+    $cardStage.classList.add('hidden');
+    $emptyState.classList.remove('hidden');
+    $remainingCount.textContent = deck.length;
+  }
+
+  function showCard() {
+    $emptyState.classList.add('hidden');
+    $gameOver.classList.add('hidden');
+    $cardStage.classList.remove('hidden');
+  }
+
+  function drawCard() {
+    if (deck.length === 0) return;
+    currentCard = deck.pop();
+    renderCard();
+    showCard();
+    updateUI();
+  }
+
+  function renderCard() {
+    if (!currentCard) return;
+    const r = RARITY[currentCard.rarity];
+    $activeCard.setAttribute('data-rarity', currentCard.rarity);
+    $rarityDot.style.backgroundColor = r.color;
+    $rarityLabel.textContent = r.label;
+    $rarityLabel.style.color = r.color;
+    $cardQuestion.textContent = currentCard.text;
+    $cardCategory.textContent = currentCard.category;
+
+    /* animate in */
+    $cardStage.classList.remove('animate-out');
+    $cardStage.classList.add('animate-in');
+    void $cardStage.offsetWidth;
+    $cardStage.classList.remove('animate-in');
+    void $cardStage.offsetWidth;
+    $cardStage.classList.add('animate-in');
+  }
+
+  function answerCard() {
+    if (!currentCard) return;
+
+    /* score */
+    if (scoreEnabled) {
+      const pts = RARITY[currentCard.rarity].points;
+      score += pts;
+      showScorePop(pts);
+    }
+    questionsAnswered++;
+
+    /* move to discard */
+    discard.unshift({ ...currentCard, id: Date.now() });
+    currentCard = null;
+
+    /* animate out */
+    $cardStage.classList.remove('animate-in');
+    $cardStage.classList.add('animate-out');
+
+    setTimeout(() => {
+      updateUI();
+      renderDiscardPile();
+      if (deck.length === 0) {
+        showGameOver();
+      } else {
+        showEmptyState();
+        $drawBtn.focus();
+      }
+    }, 300);
+  }
+
+  function skipCard() {
+    if (!currentCard) return;
+    /* Put back and reshuffle into random position */
+    const idx = Math.floor(Math.random() * (deck.length + 1));
+    deck.splice(idx, 0, currentCard);
+    currentCard = null;
+
+    $cardStage.classList.remove('animate-in');
+    $cardStage.classList.add('animate-out');
+
+    setTimeout(() => {
+      updateUI();
+      showEmptyState();
+      $drawBtn.focus();
+    }, 300);
+  }
+
+  function showGameOver() {
+    $cardStage.classList.add('hidden');
+    $emptyState.classList.add('hidden');
+    $gameOver.classList.remove('hidden');
+
+    if (scoreEnabled && score > 0) {
+      $finalScores.innerHTML = `
+        <div class="final-score">
+          <div class="final-score-value" style="color: var(--primary)">${score}</div>
+          <div class="final-score-label">Total Score</div>
+        </div>
+        <div class="final-score">
+          <div class="final-score-value">${questionsAnswered}</div>
+          <div class="final-score-label">Questions</div>
+        </div>
+      `;
+    } else {
+      $finalScores.innerHTML = `
+        <div class="final-score">
+          <div class="final-score-value">${questionsAnswered}</div>
+          <div class="final-score-label">Questions Answered</div>
+        </div>
+      `;
+    }
+  }
+
+  function showScorePop(pts) {
+    const el = document.createElement('div');
+    el.className = 'score-pop';
+    el.textContent = `+${pts}`;
+    el.style.left = '50%';
+    el.style.top = '45%';
+    el.style.transform = 'translate(-50%, -50%)';
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
+
+  function renderDiscardPile() {
+    if (discard.length === 0) {
+      $discardPile.innerHTML = '<p class="discard-empty">No questions answered yet</p>';
+    } else {
+      $discardPile.innerHTML = discard.map((q) => {
+        const r = RARITY[q.rarity];
+        return `
+          <div class="discard-item">
+            <span class="discard-item-dot" style="background: ${r.color}"></span>
+            <span class="discard-item-text" title="${escapeHTML(q.text)}">${escapeHTML(q.text)}</span>
+            ${scoreEnabled ? `<span class="discard-item-score" style="color: ${r.color}">+${r.points}</span>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+    $discardCount.textContent = discard.length;
+  }
+
+  function updateUI() {
+    $remainingCount.textContent = deck.length;
+    $discardCount.textContent = discard.length;
+
+    /* score display */
+    if (scoreEnabled) {
+      $scoreValue.textContent = score;
+      $scoreDisplay.style.display = '';
+    } else {
+      $scoreDisplay.style.display = 'none';
+    }
+  }
+
+  function toggleScore(enabled) {
+    scoreEnabled = enabled;
+    if (enabled) {
+      $scoreTrack.classList.add('active');
+    } else {
+      $scoreTrack.classList.remove('active');
+    }
+    updateUI();
+    renderDiscardPile();
+  }
+
+  function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function showToast(msg) {
+    const existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    const el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    el.addEventListener('animationend', (e) => {
+      if (e.animationName === 'toastOut') el.remove();
+    });
+  }
+
+  /* ── Event Listeners ── */
+  $drawBtn.addEventListener('click', drawCard);
+  $answeredBtn.addEventListener('click', answerCard);
+  $skipBtn.addEventListener('click', skipCard);
+  $resetBtn.addEventListener('click', resetGame);
+  $themeToggle.addEventListener('click', toggleTheme);
+
+  $scoreToggle.addEventListener('change', () => {
+    toggleScore($scoreToggle.checked);
+  });
+
+  $discardToggle.addEventListener('click', () => {
+    const isOpen = $discardPile.classList.toggle('open');
+    $discardChevron.classList.toggle('open', isOpen);
+    $discardToggle.setAttribute('aria-expanded', isOpen);
+  });
+
+  /* ── Modal Event Listeners ── */
+  $editBtn.addEventListener('click', openModal);
+  $modalClose.addEventListener('click', closeModal);
+  $modalOverlay.addEventListener('click', (e) => {
+    if (e.target === $modalOverlay) closeModal();
+  });
+
+  /* New pack form toggle */
+  document.getElementById('newPackBtn').addEventListener('click', () => {
+    const form = document.getElementById('newPackForm');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    if (form.style.display === 'block') document.getElementById('newPackName').focus();
+  });
+
+  $newPackForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = $newPackName.value.trim();
+    if (!name) return;
+    const pack = await createPack(name);
+    $newPackName.value = '';
+    $newPackForm.style.display = 'none';
+    if (pack) {
+      openPackId = pack.id;
+      renderPacks();
+      showToast(`"${pack.name}" pack created`);
+    }
+  });
+
+  /* Keyboard shortcut: Escape closes modal */
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && $modalOverlay.classList.contains('open')) {
+      closeModal();
+    }
+  });
+
+  function updateDeckCount() {
+    const total = getAllQuestions().length;
+    document.getElementById('remainingCount').textContent = total;
+  }
+
+  /* Keyboard shortcuts */
+  document.addEventListener('keydown', (e) => {
+    if (e.key === ' ' || e.key === 'Enter') {
+      if (document.activeElement === $drawBtn) {
+        e.preventDefault();
+        drawCard();
+      } else if (document.activeElement === $answeredBtn) {
+        e.preventDefault();
+        answerCard();
+      } else if (document.activeElement === $skipBtn) {
+        e.preventDefault();
+        skipCard();
+      } else if (document.activeElement === $resetBtn) {
+        e.preventDefault();
+        resetGame();
+      } else if (!$cardStage.classList.contains('hidden') && !$gameOver.classList.contains('hidden')) {
+        /* game over — focus reset */
+      } else if (!$cardStage.classList.contains('hidden')) {
+        e.preventDefault();
+        answerCard();
+      } else if (!$emptyState.classList.contains('hidden')) {
+        e.preventDefault();
+        drawCard();
+      }
+    }
+    if (e.key === 'Escape' && !$cardStage.classList.contains('hidden') && currentCard) {
+      e.preventDefault();
+      skipCard();
+    }
+    if (e.key === 'ArrowLeft' && !$cardStage.classList.contains('hidden')) {
+      e.preventDefault();
+      skipCard();
+    }
+    if (e.key === 'ArrowRight' && !$cardStage.classList.contains('hidden')) {
+      e.preventDefault();
+      answerCard();
+    }
+  });
+
+  /* ── Boot ── */
+  parseQuestions();
+  loadTheme();
+  (async () => {
+    await loadPacks();
+    resetGame();
+    toggleScore(true);
+    updateDeckCount();
+  })();
+</script>
+</body>
+</html>
