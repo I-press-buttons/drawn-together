@@ -60,6 +60,12 @@ def read_json_body(handler):
 
 class GameHandler(http.server.SimpleHTTPRequestHandler):
 
+    def end_headers(self):
+        # Force browsers to revalidate on every request; without this,
+        # heuristic caching keeps serving stale app.js/style.css after edits.
+        self.send_header("Cache-Control", "no-cache")
+        super().end_headers()
+
     def do_GET(self):
         # ── List all packs ──
         if self.path == "/api/packs":

@@ -152,6 +152,18 @@ class PackAPITest(unittest.TestCase):
         status, err = self.request("DELETE", "/api/packs/999/questions/1")
         self.assertEqual(status, 404)
 
+    # ── Caching ──
+
+    def test_responses_disable_heuristic_caching(self):
+        # Without Cache-Control, browsers heuristically cache static files
+        # and keep running stale app.js after edits.
+        for path in ("/", "/app.js", "/api/packs"):
+            with urllib.request.urlopen(self.base + path) as res:
+                self.assertEqual(
+                    res.headers.get("Cache-Control"), "no-cache",
+                    f"missing Cache-Control on {path}",
+                )
+
     # ── Hardening ──
 
     def test_oversized_body_rejected_413(self):
