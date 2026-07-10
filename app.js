@@ -578,6 +578,9 @@
 
   /* Keyboard shortcuts */
   document.addEventListener('keydown', (e) => {
+    /* Never hijack keys while the user is typing in a form field */
+    const t = e.target;
+    if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return;
     if (e.key === ' ' || e.key === 'Enter') {
       if (document.activeElement === $drawBtn) {
         e.preventDefault();
