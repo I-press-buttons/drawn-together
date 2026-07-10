@@ -208,6 +208,77 @@ class PackAPITest(unittest.TestCase):
         self.assertEqual(out[0], "/tmp/cq-data/question_packs.json")
         self.assertEqual(out[1], "/tmp/cq-data/user_data.json")
 
+    # ── Question editing ──
+
+    def test_edit_question_text_and_rarity(self):
+        pack = self.make_pack()
+        _, q = self.request("POST", f"/api/packs/{pack['id']}/questions", {"text": "Old?"})
+        status, updated = self.request(
+            "PUT", f"/api/packs/{pack['id']}/questions/{q['id']}",
+            {"text": "  New?  ", "rarity": "mythic"},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(updated["text"], "New?")
+        self.assertEqual(updated["rarity"], "mythic")
+        _, packs = self.request("GET", "/api/packs")
+        self.assertEqual(packs[0]["questions"][0]["text"], "New?")
+
+    def test_edit_question_partial_category_only(self):
+        pack = self.make_pack()
+        _, q = self.request("POST", f"/api/packs/{pack['id']}/questions", {"text": "Q?"})
+        status, updated = self.request(
+            "PUT", f"/api/packs/{pack['id']}/questions/{q['id']}", {"category": "Future Us"},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(updated["category"], "Future Us")
+        self.assertEqual(updated["text"], "Q?")
+
+    def test_edit_question_empty_text_400(self):
+        pack = self.make_pack()
+        _, q = self.request("POST", f"/api/packs/{pack['id']}/questions", {"text": "Q?"})
+        status, err = self.request(
+            "PUT", f"/api/packs/{pack['id']}/questions/{q['id']}", {"text": "   "},
+        )
+        self.assertEqual(status, 400)
+
+    def test_edit_question_too_long_400(self):
+        pack = self.make_pack()
+        _, q = self.request("POST", f"/api/packs/{pack['id']}/questions", {"text": "Q?"})
+        status, err = self.request(
+            "PUT", f"/api/packs/{pack['id']}/questions/{q['id']}", {"text": "x" * 301},
+        )
+        self.assertEqual(status, 400)
+
+    def test_edit_unknown_question_404(self):
+        pack = self.make_pack()
+        status, err = self.request("PUT", f"/api/packs/{pack['id']}/questions/99", {"text": "Q?"})
+        self.assertEqual(status, 404)
+        status, err = self.request("PUT", "/api/packs/999/questions/1", {"text": "Q?"})
+        self.assertEqual(status, 404)
+
+    # ── Mark cleanup ──
+
+    def test_deleting_question_removes_its_marks(self):
+        pack = self.make_pack()
+        _, q = self.request("POST", f"/api/packs/{pack['id']}/questions", {"text": "Q?"})
+        qkey = f"p{pack['id']}-{q['id']}"
+        self.request("POST", f"/api/marks/favorites/{qkey}")
+        self.request("POST", "/api/marks/favorites/b7")
+        self.request("DELETE", f"/api/packs/{pack['id']}/questions/{q['id']}")
+        _, marks = self.request("GET", "/api/marks")
+        self.assertEqual(marks["favorites"], ["b7"])
+
+    def test_deleting_pack_removes_all_its_marks(self):
+        pack = self.make_pack()
+        _, q1 = self.request("POST", f"/api/packs/{pack['id']}/questions", {"text": "A?"})
+        _, q2 = self.request("POST", f"/api/packs/{pack['id']}/questions", {"text": "B?"})
+        self.request("POST", f"/api/marks/favorites/p{pack['id']}-{q1['id']}")
+        self.request("POST", f"/api/marks/retired/p{pack['id']}-{q2['id']}")
+        self.request("POST", "/api/marks/retired/b3")
+        self.request("DELETE", f"/api/packs/{pack['id']}")
+        _, marks = self.request("GET", "/api/marks")
+        self.assertEqual(marks, {"favorites": [], "retired": ["b3"]})
+
     # ── Caching ──
 
     def test_responses_disable_heuristic_caching(self):

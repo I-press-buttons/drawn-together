@@ -53,6 +53,19 @@ def save_user_data(data):
     USER_DATA_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
 
+def remove_marks(predicate):
+    """Drop every mark key matching predicate from both lists. Caller holds PACKS_LOCK."""
+    data = load_user_data()
+    changed = False
+    for lst in MARK_LISTS:
+        kept = [k for k in data[lst] if not predicate(k)]
+        if len(kept) != len(data[lst]):
+            data[lst] = kept
+            changed = True
+    if changed:
+        save_user_data(data)
+
+
 def json_response(handler, data, status=200):
     body = json.dumps(data, ensure_ascii=False).encode("utf-8")
     handler.send_response(status)
@@ -213,6 +226,42 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
             json_response(self, {"error": "Pack not found"}, 404)
             return
 
+        # ── Edit a question in a pack ──
+        m = re.match(r"^/api/packs/(\d+)/questions/(\d+)$", self.path)
+        if m:
+            pack_id, qid = int(m.group(1)), int(m.group(2))
+            body = read_json_body(self)
+            if body is None:
+                return
+            text = None
+            if "text" in body:
+                text = body["text"].strip()
+                if not text:
+                    json_response(self, {"error": "Question text required"}, 400)
+                    return
+                if len(text) > MAX_QUESTION_LEN:
+                    json_response(self, {"error": f"Question text must be {MAX_QUESTION_LEN} characters or fewer"}, 400)
+                    return
+            with PACKS_LOCK:
+                packs = load_packs()
+                for pack in packs:
+                    if pack["id"] != pack_id:
+                        continue
+                    for q in pack.get("questions", []):
+                        if q["id"] != qid:
+                            continue
+                        if text is not None:
+                            q["text"] = text
+                        if "rarity" in body:
+                            q["rarity"] = body["rarity"]
+                        if "category" in body:
+                            q["category"] = body["category"]
+                        save_packs(packs)
+                        json_response(self, q)
+                        return
+            json_response(self, {"error": "Question not found"}, 404)
+            return
+
         json_response(self, {"error": "Not found"}, 404)
 
     def do_DELETE(self):
@@ -224,6 +273,8 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
                 packs = load_packs()
                 packs = [p for p in packs if p["id"] != pack_id]
                 save_packs(packs)
+                prefix = f"p{pack_id}-"
+                remove_marks(lambda k: k.startswith(prefix))
             json_response(self, {"ok": True})
             return
 
@@ -238,6 +289,8 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
                         continue
                     pack["questions"] = [q for q in pack["questions"] if q["id"] != qid]
                     save_packs(packs)
+                    qkey = f"p{pack_id}-{qid}"
+                    remove_marks(lambda k: k == qkey)
                     json_response(self, {"ok": True})
                     return
             json_response(self, {"error": "Pack not found"}, 404)
