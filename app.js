@@ -263,6 +263,54 @@
       `;
     }
 
+    /* Greatest hits (favorites) */
+    const favs = marks.favorites.map(findQuestionByKey).filter(Boolean);
+    html += `
+      <div class="pack-card marks-section">
+        <div class="pack-header">
+          <span class="marks-section-icon" aria-hidden="true">♥</span>
+          <span class="pack-name">Greatest Hits</span>
+          <span class="pack-count">${favs.length} ${favs.length === 1 ? 'question' : 'questions'}</span>
+        </div>
+        <div class="pack-body open">
+          <div class="pack-questions">
+            ${favs.length === 0 ? '<p class="pack-q-empty">Heart a question mid-game to save it here</p>' : ''}
+            ${favs.map(q => {
+              const r = RARITY[q.rarity];
+              return `<div class="pack-q">
+                <span class="pack-q-text" title="${escapeAttr(q.text)}">${escapeHTML(q.text)}</span>
+                <span class="pack-q-rarity" style="color:${r.color}">${r.label}</span>
+                <button class="pack-q-del" data-unfav="${q.qkey}" aria-label="Remove from greatest hits">&times;</button>
+              </div>`;
+            }).join('')}
+          </div>
+          ${favs.length > 0 ? '<button class="btn btn-ghost marks-play-btn" id="playFavsBtn">Play favorites round</button>' : ''}
+        </div>
+      </div>
+    `;
+
+    /* Retired questions */
+    const retired = marks.retired.map(findQuestionByKey).filter(Boolean);
+    if (retired.length > 0) {
+      html += `
+        <div class="pack-card marks-section">
+          <div class="pack-header">
+            <span class="marks-section-icon" aria-hidden="true">⊘</span>
+            <span class="pack-name">Retired</span>
+            <span class="pack-count">${retired.length}</span>
+          </div>
+          <div class="pack-body open">
+            <div class="pack-questions">
+              ${retired.map(q => `<div class="pack-q">
+                <span class="pack-q-text" title="${escapeAttr(q.text)}">${escapeHTML(q.text)}</span>
+                <button class="btn-restore" data-restore="${q.qkey}">Restore</button>
+              </div>`).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     container.innerHTML = html;
     bindPackEvents();
   }
@@ -310,12 +358,34 @@
     document.querySelectorAll('.pack-q-del').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
+        if (!btn.dataset.pack) return;   /* greatest-hits rows use data-unfav instead */
         const packId = parseInt(btn.dataset.pack);
         const qid = parseInt(btn.dataset.qid);
         await deleteQuestionFromPack(packId, qid);
+        await loadMarks();               /* server may have dropped orphaned marks */
         renderPacks();
       });
     });
+
+    /* Un-favorite from greatest hits */
+    document.querySelectorAll('[data-unfav]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await setMark('favorites', btn.dataset.unfav, false);
+        renderPacks();
+      });
+    });
+
+    /* Restore a retired question */
+    document.querySelectorAll('[data-restore]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await setMark('retired', btn.dataset.restore, false);
+        renderPacks();
+      });
+    });
+
+    /* Play favorites round */
+    const playFavs = document.getElementById('playFavsBtn');
+    if (playFavs) playFavs.addEventListener('click', startFavoritesRound);
   }
 
   /* ── DOM ── */
@@ -361,8 +431,9 @@
     return a;
   }
 
-  function resetGame() {
-    deck = shuffle(getAllQuestions());
+  function resetGame(customDeck) {
+    /* Array.isArray guard: resetGame doubles as a click handler, which passes a MouseEvent */
+    deck = shuffle(Array.isArray(customDeck) ? customDeck : getAllQuestions());
     discard = [];
     currentCard = null;
     score = 0;
@@ -375,6 +446,15 @@
     $discardChevron.classList.remove('open');
     $discardToggle.setAttribute('aria-expanded', 'false');
     $drawBtn.focus();
+  }
+
+  function startFavoritesRound() {
+    const favs = marks.favorites.map(findQuestionByKey)
+      .filter(q => q && !isRetired(q.qkey));
+    if (favs.length === 0) return;
+    closeModal();
+    resetGame(favs);
+    showToast(`Favorites round — ${favs.length} greatest hit${favs.length === 1 ? '' : 's'}`);
   }
 
   function showEmptyState() {
@@ -550,6 +630,10 @@
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  function escapeAttr(str) {
+    return escapeHTML(str).replace(/"/g, '&quot;');
   }
 
   function showToast(msg, action) {
