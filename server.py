@@ -5,12 +5,20 @@ import http.server
 import json
 import os
 import re
-import hashlib
+import threading
 from pathlib import Path
 
 HOST = os.environ.get("HOST", "0.0.0.0")
 PORT = int(os.environ.get("PORT", 8080))
 DATA_FILE = Path(__file__).parent / "question_packs.json"
+
+MAX_BODY_BYTES = 1_000_000   # reject request bodies larger than ~1 MB
+MAX_NAME_LEN = 60            # matches maxlength on #newPackName in index.html
+MAX_QUESTION_LEN = 300       # matches maxlength on the pack-add-input in index.html
+
+# Serializes every load_packs() -> mutate -> save_packs() sequence so two
+# clients editing packs at once can't overwrite each other's writes.
+PACKS_LOCK = threading.Lock()
 
 
 def load_packs():
@@ -36,7 +44,15 @@ def json_response(handler, data, status=200):
 
 
 def read_json_body(handler):
+    """Read and parse the JSON request body.
+
+    Sends a 413 and returns None if Content-Length exceeds MAX_BODY_BYTES,
+    so callers must bail out with `if body is None: return`.
+    """
     length = int(handler.headers.get("Content-Length", 0))
+    if length > MAX_BODY_BYTES:
+        json_response(handler, {"error": "Request body too large"}, 413)
+        return None
     if length == 0:
         return {}
     return json.loads(handler.rfile.read(length))
@@ -57,19 +73,25 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
         # ── Create a new pack ──
         if self.path == "/api/packs":
             body = read_json_body(self)
+            if body is None:
+                return
             name = body.get("name", "").strip()
             if not name:
                 json_response(self, {"error": "Pack name required"}, 400)
                 return
-            packs = load_packs()
-            new_pack = {
-                "id": _next_id(packs),
-                "name": name,
-                "enabled": True,
-                "questions": [],
-            }
-            packs.append(new_pack)
-            save_packs(packs)
+            if len(name) > MAX_NAME_LEN:
+                json_response(self, {"error": f"Pack name must be {MAX_NAME_LEN} characters or fewer"}, 400)
+                return
+            with PACKS_LOCK:
+                packs = load_packs()
+                new_pack = {
+                    "id": _next_id(packs),
+                    "name": name,
+                    "enabled": True,
+                    "questions": [],
+                }
+                packs.append(new_pack)
+                save_packs(packs)
             json_response(self, new_pack, 201)
             return
 
@@ -77,25 +99,31 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
         m = re.match(r"^/api/packs/(\d+)/questions$", self.path)
         if m:
             pack_id = int(m.group(1))
-            packs = load_packs()
-            for pack in packs:
-                if pack["id"] != pack_id:
-                    continue
-                body = read_json_body(self)
-                text = body.get("text", "").strip()
-                if not text:
-                    json_response(self, {"error": "Question text required"}, 400)
-                    return
-                q = {
-                    "id": _next_id(pack.get("questions", [])),
-                    "text": text,
-                    "rarity": body.get("rarity", "common"),
-                    "category": body.get("category", "Custom"),
-                }
-                pack.setdefault("questions", []).append(q)
-                save_packs(packs)
-                json_response(self, q, 201)
+            body = read_json_body(self)
+            if body is None:
                 return
+            text = body.get("text", "").strip()
+            if not text:
+                json_response(self, {"error": "Question text required"}, 400)
+                return
+            if len(text) > MAX_QUESTION_LEN:
+                json_response(self, {"error": f"Question text must be {MAX_QUESTION_LEN} characters or fewer"}, 400)
+                return
+            with PACKS_LOCK:
+                packs = load_packs()
+                for pack in packs:
+                    if pack["id"] != pack_id:
+                        continue
+                    q = {
+                        "id": _next_id(pack.get("questions", [])),
+                        "text": text,
+                        "rarity": body.get("rarity", "common"),
+                        "category": body.get("category", "Custom"),
+                    }
+                    pack.setdefault("questions", []).append(q)
+                    save_packs(packs)
+                    json_response(self, q, 201)
+                    return
             json_response(self, {"error": "Pack not found"}, 404)
             return
 
@@ -107,17 +135,23 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
         if m:
             pack_id = int(m.group(1))
             body = read_json_body(self)
-            packs = load_packs()
-            for pack in packs:
-                if pack["id"] != pack_id:
-                    continue
-                if "enabled" in body:
-                    pack["enabled"] = bool(body["enabled"])
-                if "name" in body:
-                    pack["name"] = body["name"].strip()
-                save_packs(packs)
-                json_response(self, pack)
+            if body is None:
                 return
+            if "name" in body and len(body["name"].strip()) > MAX_NAME_LEN:
+                json_response(self, {"error": f"Pack name must be {MAX_NAME_LEN} characters or fewer"}, 400)
+                return
+            with PACKS_LOCK:
+                packs = load_packs()
+                for pack in packs:
+                    if pack["id"] != pack_id:
+                        continue
+                    if "enabled" in body:
+                        pack["enabled"] = bool(body["enabled"])
+                    if "name" in body:
+                        pack["name"] = body["name"].strip()
+                    save_packs(packs)
+                    json_response(self, pack)
+                    return
             json_response(self, {"error": "Pack not found"}, 404)
             return
 
@@ -128,9 +162,10 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
         m = re.match(r"^/api/packs/(\d+)$", self.path)
         if m:
             pack_id = int(m.group(1))
-            packs = load_packs()
-            packs = [p for p in packs if p["id"] != pack_id]
-            save_packs(packs)
+            with PACKS_LOCK:
+                packs = load_packs()
+                packs = [p for p in packs if p["id"] != pack_id]
+                save_packs(packs)
             json_response(self, {"ok": True})
             return
 
@@ -138,15 +173,17 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
         m = re.match(r"^/api/packs/(\d+)/questions/(\d+)$", self.path)
         if m:
             pack_id, qid = int(m.group(1)), int(m.group(2))
-            packs = load_packs()
-            for pack in packs:
-                if pack["id"] != pack_id:
-                    continue
-                pack["questions"] = [q for q in pack["questions"] if q["id"] != qid]
-                save_packs(packs)
-                json_response(self, {"ok": True})
-                return
+            with PACKS_LOCK:
+                packs = load_packs()
+                for pack in packs:
+                    if pack["id"] != pack_id:
+                        continue
+                    pack["questions"] = [q for q in pack["questions"] if q["id"] != qid]
+                    save_packs(packs)
+                    json_response(self, {"ok": True})
+                    return
             json_response(self, {"error": "Pack not found"}, 404)
+            return
 
         json_response(self, {"error": "Not found"}, 404)
 

@@ -152,6 +152,60 @@ class PackAPITest(unittest.TestCase):
         status, err = self.request("DELETE", "/api/packs/999/questions/1")
         self.assertEqual(status, 404)
 
+    # ── Hardening ──
+
+    def test_oversized_body_rejected_413(self):
+        # Claim a huge body via Content-Length without sending it; the
+        # server must reject from the header alone, before reading.
+        status, err = self.raw_request(
+            "POST", "/api/packs",
+            {"Content-Type": "application/json", "Content-Length": str(2_000_000)},
+        )
+        self.assertEqual(status, 413)
+        self.assertIn("error", err)
+
+    def test_pack_name_too_long_400(self):
+        status, err = self.request("POST", "/api/packs", {"name": "x" * 61})
+        self.assertEqual(status, 400)
+        self.assertIn("error", err)
+
+    def test_rename_too_long_400(self):
+        pack = self.make_pack()
+        status, err = self.request("PUT", f"/api/packs/{pack['id']}", {"name": "x" * 61})
+        self.assertEqual(status, 400)
+        _, packs = self.request("GET", "/api/packs")
+        self.assertEqual(packs[0]["name"], "Date Night")  # unchanged
+
+    def test_question_text_too_long_400(self):
+        pack = self.make_pack()
+        status, err = self.request(
+            "POST", f"/api/packs/{pack['id']}/questions", {"text": "x" * 301}
+        )
+        self.assertEqual(status, 400)
+
+    def test_concurrent_pack_creates_do_not_lose_writes(self):
+        errors = []
+
+        def create(i):
+            try:
+                status, _ = self.request("POST", "/api/packs", {"name": f"Pack {i}"})
+                if status != 201:
+                    errors.append(status)
+            except Exception as e:  # noqa: BLE001 — collect for assertion
+                errors.append(e)
+
+        threads = [threading.Thread(target=create, args=(i,)) for i in range(10)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        self.assertEqual(errors, [])
+        status, packs = self.request("GET", "/api/packs")
+        self.assertEqual(len(packs), 10)
+        ids = [p["id"] for p in packs]
+        self.assertEqual(len(set(ids)), 10, f"duplicate ids: {ids}")
+
 
 if __name__ == "__main__":
     unittest.main()
