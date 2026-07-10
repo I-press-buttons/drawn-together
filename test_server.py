@@ -2,6 +2,9 @@
 
 import http.client
 import json
+import os
+import subprocess
+import sys
 import tempfile
 import threading
 import unittest
@@ -20,6 +23,7 @@ class PackAPITest(unittest.TestCase):
         cls._tmpdir = tempfile.TemporaryDirectory()
         # Point the server module at a throwaway data file.
         server.DATA_FILE = Path(cls._tmpdir.name) / "question_packs.json"
+        server.USER_DATA_FILE = Path(cls._tmpdir.name) / "user_data.json"
         cls.httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.GameHandler)
         cls.port = cls.httpd.server_address[1]
         cls.base = f"http://127.0.0.1:{cls.port}"
@@ -34,6 +38,7 @@ class PackAPITest(unittest.TestCase):
 
     def setUp(self):
         server.DATA_FILE.write_text("[]")
+        server.USER_DATA_FILE.write_text('{"favorites": [], "retired": []}')
 
     def request(self, method, path, body=None):
         """Return (status, parsed_json) for a request to the test server."""
@@ -151,6 +156,57 @@ class PackAPITest(unittest.TestCase):
     def test_delete_question_unknown_pack_404(self):
         status, err = self.request("DELETE", "/api/packs/999/questions/1")
         self.assertEqual(status, 404)
+
+    # ── Marks ──
+
+    def test_get_marks_empty(self):
+        status, marks = self.request("GET", "/api/marks")
+        self.assertEqual(status, 200)
+        self.assertEqual(marks, {"favorites": [], "retired": []})
+
+    def test_add_and_remove_favorite(self):
+        status, marks = self.request("POST", "/api/marks/favorites/b12")
+        self.assertEqual(status, 200)
+        self.assertEqual(marks["favorites"], ["b12"])
+        # idempotent add
+        status, marks = self.request("POST", "/api/marks/favorites/b12")
+        self.assertEqual(marks["favorites"], ["b12"])
+        status, marks = self.request("DELETE", "/api/marks/favorites/b12")
+        self.assertEqual(status, 200)
+        self.assertEqual(marks["favorites"], [])
+        # idempotent remove
+        status, marks = self.request("DELETE", "/api/marks/favorites/b12")
+        self.assertEqual(status, 200)
+
+    def test_retired_list_independent_of_favorites(self):
+        self.request("POST", "/api/marks/favorites/b1")
+        status, marks = self.request("POST", "/api/marks/retired/p3-2")
+        self.assertEqual(marks, {"favorites": ["b1"], "retired": ["p3-2"]})
+
+    def test_malformed_mark_key_400(self):
+        for bad in ("x9", "b", "p3", "p3-2-1", "b1;rm"):
+            status, err = self.request("POST", f"/api/marks/favorites/{bad}")
+            self.assertEqual(status, 400, f"key {bad!r} should be rejected")
+            self.assertIn("error", err)
+
+    def test_unknown_mark_list_404(self):
+        status, err = self.request("POST", "/api/marks/loved/b1")
+        self.assertEqual(status, 404)
+
+    def test_marks_persist_to_user_data_file(self):
+        self.request("POST", "/api/marks/retired/b40")
+        on_disk = json.loads(server.USER_DATA_FILE.read_text())
+        self.assertEqual(on_disk["retired"], ["b40"])
+
+    def test_data_dir_env_override(self):
+        out = subprocess.check_output(
+            [sys.executable, "-c",
+             "import server; print(server.DATA_FILE); print(server.USER_DATA_FILE)"],
+            env={**os.environ, "DATA_DIR": "/tmp/cq-data"},
+            cwd=str(Path(__file__).parent),
+        ).decode().strip().splitlines()
+        self.assertEqual(out[0], "/tmp/cq-data/question_packs.json")
+        self.assertEqual(out[1], "/tmp/cq-data/user_data.json")
 
     # ── Caching ──
 
