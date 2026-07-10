@@ -104,7 +104,7 @@
   /* ── Top Bar ── */
   .top-bar {
     width: 100%;
-    max-width: 480px;
+    max-width: min(92vw, clamp(480px, 46vw, 720px));
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -212,7 +212,7 @@
   .main {
     flex: 1;
     width: 100%;
-    max-width: 480px;
+    max-width: min(92vw, clamp(480px, 46vw, 720px));
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -236,13 +236,13 @@
 
   .deck-illustration {
     position: relative;
-    width: 140px;
-    height: 180px;
+    width: clamp(140px, 10vw + 100px, 200px);
+    height: clamp(180px, 12vw + 130px, 256px);
   }
   .deck-card {
     position: absolute;
-    width: 120px;
-    height: 168px;
+    width: clamp(120px, 9vw + 84px, 172px);
+    height: clamp(168px, 12vw + 118px, 240px);
     border-radius: var(--radius-md);
     background: var(--surface);
     border: 1px solid var(--card-border);
@@ -340,7 +340,7 @@
     background: var(--surface);
     border: 1px solid var(--card-border);
     border-radius: var(--radius-lg);
-    padding: 2rem 1.5rem 1.75rem;
+    padding: clamp(2rem, 1.4rem + 1.5vw, 3rem) clamp(1.5rem, 1.1rem + 1vw, 2.25rem) clamp(1.75rem, 1.35rem + 1vw, 2.5rem);
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
@@ -378,7 +378,8 @@
 
   .card-question {
     font-family: var(--font-display);
-    font-size: clamp(1.25rem, 4vw, 1.5rem);
+    font-size: clamp(1.25rem, 1.2vw + 1rem, 2rem);
+    max-width: 34ch;
     font-weight: 400;
     line-height: 1.45;
     letter-spacing: -0.01em;
@@ -437,7 +438,7 @@
   /* ── Discard Drawer ── */
   .discard-area {
     width: 100%;
-    max-width: 480px;
+    max-width: min(92vw, clamp(480px, 46vw, 720px));
     flex-shrink: 0;
     padding: 0.5rem 0 1rem;
     position: relative;
@@ -545,7 +546,7 @@
   }
   .game-over-heading {
     font-family: var(--font-display);
-    font-size: 1.5rem;
+    font-size: clamp(1.5rem, 0.6vw + 1.35rem, 1.875rem);
     font-weight: 500;
     letter-spacing: -0.01em;
   }
@@ -627,7 +628,28 @@
     from { transform: translateY(100%); }
     to   { transform: translateY(0); }
   }
+  @keyframes dialogIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
   @media (prefers-reduced-motion: reduce) {
+    .modal-sheet { animation: none; }
+  }
+
+  /* Desktop/tablet: centered dialog instead of bottom sheet */
+  @media (min-width: 640px) {
+    .modal-overlay {
+      align-items: center;
+    }
+    .modal-sheet {
+      max-width: min(90vw, 640px);
+      max-height: 85vh;
+      border-radius: var(--radius-xl);
+      animation: dialogIn 0.25s var(--ease-out-quart) both;
+    }
+    .modal-handle { display: none; }
+  }
+  @media (min-width: 640px) and (prefers-reduced-motion: reduce) {
     .modal-sheet { animation: none; }
   }
 
@@ -1030,7 +1052,6 @@
   /* ── Responsive ── */
   @media (min-width: 520px) {
     body { padding: 2rem; }
-    .card { padding: 2.25rem 2rem 2rem; }
   }
 
 /* ── Card mark buttons (favorite / retire) ── */
