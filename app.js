@@ -15,7 +15,7 @@
   async function loadQuestions() {
     try {
       const res = await fetch('questions.json');
-      if (res.ok) QUESTIONS.push(...(await res.json()));
+      if (res.ok) QUESTIONS.push(...(await res.json()).map(q => ({ ...q, qkey: q.id })));
     } catch (e) { /* fetch failed — deck stays empty, packs may still load */ }
   }
 
@@ -58,6 +58,44 @@
   /* ── Question Packs (server-side) ── */
   const API_BASE = '/api/packs';
   let questionPacks = [];
+
+  /* ── User marks (favorites / retired, server-side) ── */
+  let marks = { favorites: [], retired: [] };
+  let sessionHearts = 0;
+
+  async function loadMarks() {
+    try {
+      const res = await fetch('/api/marks');
+      if (res.ok) marks = await res.json();
+    } catch (e) { /* keep empty defaults */ }
+  }
+
+  function isFavorite(qkey) { return marks.favorites.includes(qkey); }
+  function isRetired(qkey) { return marks.retired.includes(qkey); }
+
+  /* Optimistic toggle: mutate locally, revert if the server rejects. */
+  async function setMark(listName, qkey, on) {
+    const list = marks[listName];
+    const had = list.includes(qkey);
+    if (on && !had) list.push(qkey);
+    if (!on && had) marks[listName] = list.filter(k => k !== qkey);
+    try {
+      const res = await fetch(`/api/marks/${listName}/${qkey}`, { method: on ? 'POST' : 'DELETE' });
+      if (res.ok) { marks = await res.json(); return true; }
+    } catch (e) { /* fall through to revert */ }
+    await loadMarks();
+    showToast("Couldn't save that — check the server");
+    return false;
+  }
+
+  function findQuestionByKey(qkey) {
+    if (qkey.startsWith('b')) return QUESTIONS.find(q => q.qkey === qkey) || null;
+    const m = qkey.match(/^p(\d+)-(\d+)$/);
+    if (!m) return null;
+    const pack = questionPacks.find(p => p.id === parseInt(m[1]));
+    const q = pack && pack.questions.find(x => x.id === parseInt(m[2]));
+    return q ? { text: q.text, rarity: q.rarity, category: q.category || 'Custom', qkey } : null;
+  }
 
   async function loadPacks() {
     try {
@@ -139,10 +177,12 @@
           rarity: q.rarity,
           category: q.category || 'Custom',
           pack: pack.name,
+          qkey: `p${pack.id}-${q.id}`,
         });
       }
     }
-    return extra.length === 0 ? [...QUESTIONS] : [...QUESTIONS, ...extra];
+    const all = extra.length === 0 ? [...QUESTIONS] : [...QUESTIONS, ...extra];
+    return all.filter(q => !isRetired(q.qkey));
   }
 
   function getEnabledPackCount() {
@@ -622,7 +662,7 @@
   loadTheme();
   (async () => {
     await loadQuestions();
-    await loadPacks();
+    await Promise.all([loadPacks(), loadMarks()]);
     resetGame();
     toggleScore(true);
     updateDeckCount();
