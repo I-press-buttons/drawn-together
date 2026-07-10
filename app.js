@@ -26,6 +26,7 @@
   let score = 0;
   let scoreEnabled = true;
   let questionsAnswered = 0;
+  let rarestAnswered = null;
 
   /* ── Theme ── */
   function getTheme() {
@@ -438,6 +439,8 @@
     currentCard = null;
     score = 0;
     questionsAnswered = 0;
+    rarestAnswered = null;
+    sessionHearts = 0;
     updateUI();
     showEmptyState();
     $gameOver.classList.add('hidden');
@@ -509,6 +512,9 @@
       showScorePop(pts);
     }
     questionsAnswered++;
+    if (!rarestAnswered || RARITY[currentCard.rarity].points > RARITY[rarestAnswered.rarity].points) {
+      rarestAnswered = currentCard;
+    }
 
     /* move to discard */
     discard.unshift({ ...currentCard, id: Date.now() });
@@ -571,6 +577,19 @@
         </div>
       `;
     }
+
+    document.getElementById('gameOverSub').innerHTML =
+      `You made it through <strong>${questionsAnswered}</strong> question${questionsAnswered === 1 ? '' : 's'} together.<br>Here's to many more conversations.`;
+
+    let extra = '';
+    if (rarestAnswered) {
+      const r = RARITY[rarestAnswered.rarity];
+      extra += `Rarest catch: “${escapeHTML(rarestAnswered.text)}” <span style="color:${r.color}">(${r.label})</span>`;
+    }
+    if (sessionHearts > 0) {
+      extra += `${extra ? '<br>' : ''}You saved ${sessionHearts} to your greatest hits.`;
+    }
+    document.getElementById('gameOverExtra').innerHTML = extra;
   }
 
   function showScorePop(pts) {
