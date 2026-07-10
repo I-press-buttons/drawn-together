@@ -463,6 +463,32 @@
   const $newPackForm = document.getElementById('newPackForm');
   const $newPackName = document.getElementById('newPackName');
   const $mainArea     = document.getElementById('mainArea');
+  const $authOverlay  = document.getElementById('authOverlay');
+  const $authClose    = document.getElementById('authClose');
+  const $authForm     = document.getElementById('authForm');
+  const $authEmail    = document.getElementById('authEmail');
+  const $authSent     = document.getElementById('authSent');
+  const $accountRow   = document.getElementById('accountRow');
+  const $accountEmail = document.getElementById('accountEmail');
+  const $signOutBtn   = document.getElementById('signOutBtn');
+
+  /* ── Auth (no-op for the server backend) ── */
+  function requireSignIn() {
+    if (window.store.signedIn()) return true;
+    $authOverlay.classList.add('open');
+    return false;
+  }
+
+  function updateAuthUI() {
+    const email = window.store.userEmail();
+    $accountRow.classList.toggle('hidden', !email);
+    if (email) $accountEmail.textContent = email;
+    /* re-pull user data whenever auth flips */
+    Promise.all([loadPacks(), loadMarks()]).then(() => {
+      renderPacks();
+      resetGame();
+    });
+  }
 
   /* ── Init ── */
   function shuffle(arr) {
@@ -724,6 +750,7 @@
   $themeToggle.addEventListener('click', toggleTheme);
 
   $favBtn.addEventListener('click', async () => {
+    if (!requireSignIn()) return;
     if (!currentCard) return;
     const on = !isFavorite(currentCard.qkey);
     $favBtn.classList.toggle('active', on);
@@ -736,6 +763,7 @@
   });
 
   $retireBtn.addEventListener('click', () => {
+    if (!requireSignIn()) return;
     if (currentCard) retireCurrentCard();
   });
 
@@ -773,10 +801,29 @@
   });
 
   /* ── Modal Event Listeners ── */
-  $editBtn.addEventListener('click', openModal);
+  $editBtn.addEventListener('click', () => {
+    if (!requireSignIn()) return;
+    openModal();
+  });
   $modalClose.addEventListener('click', closeModal);
   $modalOverlay.addEventListener('click', (e) => {
     if (e.target === $modalOverlay) closeModal();
+  });
+
+  /* ── Auth Event Listeners ── */
+  window.store.onAuthChange(updateAuthUI);
+  $authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const ok = await window.store.signIn($authEmail.value.trim());
+    $authSent.classList.toggle('hidden', !ok);
+    if (!ok) showToast("Couldn't send the link — try again");
+  });
+  $authClose.addEventListener('click', () => $authOverlay.classList.remove('open'));
+  $authOverlay.addEventListener('click', (e) => {
+    if (e.target === $authOverlay) $authOverlay.classList.remove('open');
+  });
+  $signOutBtn.addEventListener('click', async () => {
+    await window.store.signOut();
   });
 
   /* New pack form toggle */
