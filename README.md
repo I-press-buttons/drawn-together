@@ -74,6 +74,28 @@ docker run -d --name drawn-together -p 8080:8080 \
   -v drawn-together-data:/data --restart unless-stopped drawn-together
 ```
 
+## Hosted web version (GitHub Pages + Supabase)
+
+The same game deploys as a static site where invited users sign in with an
+email magic link and keep their packs and favorites in
+[Supabase](https://supabase.com), synced across devices. Anyone can play the
+base deck without signing in.
+
+One-time setup:
+
+1. Create a free Supabase project and run `supabase/schema.sql` in its SQL
+   editor.
+2. In Authentication → Sign In / Up, disable **Allow new users to sign up**
+   (accounts become invite-only; invite emails from the Users page).
+3. In Authentication → URL Configuration, set the site URL to your Pages URL
+   (e.g. `https://<user>.github.io/<repo>/`).
+4. Put your project URL and publishable key in `config.web.js`.
+5. In the repo settings, enable Pages with source "GitHub Actions".
+
+Every push to `main` redeploys the site via `.github/workflows/pages.yml`.
+The publishable key is safe to commit — row-level security is what protects
+each user's data.
+
 ## Tests
 
 ```sh

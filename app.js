@@ -57,7 +57,6 @@
   }
 
   /* ── Question Packs (server-side) ── */
-  const API_BASE = '/api/packs';
   let questionPacks = [];
 
   /* ── User marks (favorites / retired, server-side) ── */
@@ -65,69 +64,52 @@
   let sessionHearts = 0;
 
   async function loadMarks() {
-    try {
-      const res = await fetch('/api/marks');
-      if (res.ok) marks = await res.json();
-    } catch (e) { /* keep empty defaults */ }
+    marks = await window.store.loadMarks();
   }
 
   function isFavorite(qkey) { return marks.favorites.includes(qkey); }
   function isRetired(qkey) { return marks.retired.includes(qkey); }
 
-  /* Optimistic toggle: mutate locally, revert if the server rejects. */
+  /* Optimistic toggle: mutate locally, revert if the backend rejects. */
   async function setMark(listName, qkey, on) {
     const list = marks[listName];
     const had = list.includes(qkey);
     if (on && !had) list.push(qkey);
     if (!on && had) marks[listName] = list.filter(k => k !== qkey);
-    try {
-      const res = await fetch(`/api/marks/${listName}/${qkey}`, { method: on ? 'POST' : 'DELETE' });
-      if (res.ok) { marks = await res.json(); return true; }
-    } catch (e) { /* fall through to revert */ }
+    const result = await window.store.setMark(listName, qkey, on);
+    if (result) { marks = result; return true; }
     await loadMarks();
-    showToast("Couldn't save that — check the server");
+    showToast("Couldn't save that — check the connection");
     return false;
   }
 
   function findQuestionByKey(qkey) {
-    if (qkey.startsWith('b')) return QUESTIONS.find(q => q.qkey === qkey) || null;
-    const m = qkey.match(/^p(\d+)-(\d+)$/);
-    if (!m) return null;
-    const pack = questionPacks.find(p => p.id === parseInt(m[1]));
-    const q = pack && pack.questions.find(x => x.id === parseInt(m[2]));
-    return q ? { text: q.text, rarity: q.rarity, category: q.category || 'Custom', qkey } : null;
-  }
-
-  async function loadPacks() {
-    try {
-      const res = await fetch(API_BASE);
-      if (res.ok) questionPacks = await res.json();
-    } catch (e) { questionPacks = []; }
-  }
-
-  async function createPack(name) {
-    const res = await fetch(API_BASE, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ name }),
-    });
-    if (res.ok) {
-      const pack = await res.json();
-      questionPacks.push(pack);
-      return pack;
+    const base = QUESTIONS.find(q => q.qkey === qkey);
+    if (base) return base;
+    for (const pack of questionPacks) {
+      for (const q of pack.questions) {
+        if (`p${pack.id}-${q.id}` === qkey) {
+          return { text: q.text, rarity: q.rarity, category: q.category || 'Custom', qkey };
+        }
+      }
     }
     return null;
   }
 
+  async function loadPacks() {
+    questionPacks = await window.store.loadPacks();
+  }
+
+  async function createPack(name) {
+    const pack = await window.store.createPack(name);
+    if (pack) questionPacks.push(pack);
+    return pack;
+  }
+
   async function togglePack(packId, enabled) {
-    const res = await fetch(`${API_BASE}/${packId}`, {
-      method: 'PUT',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ enabled }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      const idx = questionPacks.findIndex(p => p.id === packId);
+    const updated = await window.store.updatePack(packId, { enabled });
+    if (updated) {
+      const idx = questionPacks.findIndex(p => String(p.id) === String(packId));
       if (idx !== -1) questionPacks[idx] = updated;
       return true;
     }
@@ -135,52 +117,38 @@
   }
 
   async function deletePack(packId) {
-    const res = await fetch(`${API_BASE}/${packId}`, { method: 'DELETE' });
-    if (res.ok) {
-      questionPacks = questionPacks.filter(p => p.id !== packId);
+    if (await window.store.deletePack(packId)) {
+      questionPacks = questionPacks.filter(p => String(p.id) !== String(packId));
       return true;
     }
     return false;
   }
 
   async function addQuestionToPack(packId, text, rarity, category) {
-    const res = await fetch(`${API_BASE}/${packId}/questions`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ text, rarity, category }),
-    });
-    if (res.ok) {
-      const q = await res.json();
-      const pack = questionPacks.find(p => p.id === packId);
+    const q = await window.store.addQuestion(packId, { text, rarity, category });
+    if (q) {
+      const pack = questionPacks.find(p => String(p.id) === String(packId));
       if (pack) pack.questions.push(q);
-      return q;
     }
-    return null;
+    return q;
   }
 
   async function updateQuestion(packId, qid, fields) {
-    const res = await fetch(`${API_BASE}/${packId}/questions/${qid}`, {
-      method: 'PUT',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(fields),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      const pack = questionPacks.find(p => p.id === packId);
+    const updated = await window.store.updateQuestion(packId, qid, fields);
+    if (updated) {
+      const pack = questionPacks.find(p => String(p.id) === String(packId));
       if (pack) {
-        const idx = pack.questions.findIndex(q => q.id === qid);
+        const idx = pack.questions.findIndex(q => String(q.id) === String(qid));
         if (idx !== -1) pack.questions[idx] = updated;
       }
-      return updated;
     }
-    return null;
+    return updated;
   }
 
   async function deleteQuestionFromPack(packId, qid) {
-    const res = await fetch(`${API_BASE}/${packId}/questions/${qid}`, { method: 'DELETE' });
-    if (res.ok) {
-      const pack = questionPacks.find(p => p.id === packId);
-      if (pack) pack.questions = pack.questions.filter(q => q.id !== qid);
+    if (await window.store.deleteQuestion(packId, qid)) {
+      const pack = questionPacks.find(p => String(p.id) === String(packId));
+      if (pack) pack.questions = pack.questions.filter(q => String(q.id) !== String(qid));
       return true;
     }
     return false;
@@ -210,7 +178,7 @@
 
   /* ── Modal / Pack UI ── */
   let openPackId = null;
-  let editingQ = null;   /* "packId-qid" while a question row is in edit mode */
+  let editingQ = null;   /* "packId::qid" while a question row is in edit mode */
 
   function openModal() {
     renderPacks();
@@ -242,7 +210,7 @@
 
     /* Custom packs */
     for (const pack of questionPacks) {
-      const isOpen = openPackId === pack.id;
+      const isOpen = String(openPackId) === String(pack.id);
       const rCount = pack.questions.length;
       html += `
         <div class="pack-card">
@@ -257,8 +225,8 @@
               ${rCount === 0 ? '<p class="pack-q-empty">No questions yet</p>' : ''}
               ${pack.questions.map(q => {
                 const r = RARITY[q.rarity];
-                if (editingQ === `${pack.id}-${q.id}`) {
-                  return `<form class="pack-q pack-q-edit" data-edit-form="${pack.id}-${q.id}" autocomplete="off">
+                if (editingQ === `${pack.id}::${q.id}`) {
+                  return `<form class="pack-q pack-q-edit" data-edit-pack="${pack.id}" data-edit-qid="${q.id}" autocomplete="off">
                     <input class="pack-add-input" type="text" maxlength="300" value="${escapeAttr(q.text)}" required>
                     <div class="pack-add-meta">
                       <select>${Object.entries(RARITY).map(([k, v]) =>
@@ -275,7 +243,7 @@
                 return `<div class="pack-q">
                   <span class="pack-q-text" title="${escapeAttr(q.text)}">${escapeHTML(q.text)}</span>
                   <span class="pack-q-rarity" style="color:${r.color}">${r.label}</span>
-                  <button class="pack-q-edit-btn" data-edit="${pack.id}-${q.id}" aria-label="Edit question">
+                  <button class="pack-q-edit-btn" data-edit="${pack.id}::${q.id}" aria-label="Edit question">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                   </button>
                   <button class="pack-q-del" data-pack="${pack.id}" data-qid="${q.id}" aria-label="Delete question">&times;</button>
@@ -358,8 +326,8 @@
     document.querySelectorAll('[data-toggle]').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        const id = parseInt(btn.dataset.toggle);
-        const pack = questionPacks.find(p => p.id === id);
+        const id = btn.dataset.toggle;
+        const pack = questionPacks.find(p => String(p.id) === id);
         if (!pack) return;
         await togglePack(id, !pack.enabled);
         renderPacks();
@@ -369,8 +337,8 @@
     /* Expand/collapse pack */
     document.querySelectorAll('.pack-header[data-pack-id]').forEach(hdr => {
       hdr.addEventListener('click', (e) => {
-        const id = parseInt(hdr.dataset.packId);
-        openPackId = openPackId === id ? null : id;
+        const id = hdr.dataset.packId;
+        openPackId = String(openPackId) === id ? null : id;
         renderPacks();
       });
     });
@@ -379,7 +347,7 @@
     document.querySelectorAll('[data-pack-form]').forEach(form => {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const packId = parseInt(form.dataset.packForm);
+        const packId = form.dataset.packForm;
         const input = form.querySelector('input');
         const selects = form.querySelectorAll('select');
         const text = input.value.trim();
@@ -397,8 +365,8 @@
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         if (!btn.dataset.pack) return;   /* greatest-hits rows use data-unfav instead */
-        const packId = parseInt(btn.dataset.pack);
-        const qid = parseInt(btn.dataset.qid);
+        const packId = btn.dataset.pack;
+        const qid = btn.dataset.qid;
         await deleteQuestionFromPack(packId, qid);
         await loadMarks();               /* server may have dropped orphaned marks */
         renderPacks();
@@ -431,7 +399,7 @@
         e.stopPropagation();
         editingQ = btn.dataset.edit;
         renderPacks();
-        const form = document.querySelector('[data-edit-form]');
+        const form = document.querySelector('.pack-q-edit');
         if (form) form.querySelector('input').focus();
       });
     });
@@ -445,10 +413,11 @@
     });
 
     /* Save edit */
-    document.querySelectorAll('[data-edit-form]').forEach(form => {
+    document.querySelectorAll('.pack-q-edit').forEach(form => {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const [packId, qid] = form.dataset.editForm.split('-').map(Number);
+        const packId = form.dataset.editPack;
+        const qid = form.dataset.editQid;
         const text = form.querySelector('input').value.trim();
         if (!text) return;
         const selects = form.querySelectorAll('select');
@@ -494,6 +463,32 @@
   const $newPackForm = document.getElementById('newPackForm');
   const $newPackName = document.getElementById('newPackName');
   const $mainArea     = document.getElementById('mainArea');
+  const $authOverlay  = document.getElementById('authOverlay');
+  const $authClose    = document.getElementById('authClose');
+  const $authForm     = document.getElementById('authForm');
+  const $authEmail    = document.getElementById('authEmail');
+  const $authSent     = document.getElementById('authSent');
+  const $accountRow   = document.getElementById('accountRow');
+  const $accountEmail = document.getElementById('accountEmail');
+  const $signOutBtn   = document.getElementById('signOutBtn');
+
+  /* ── Auth (no-op for the server backend) ── */
+  function requireSignIn() {
+    if (window.store.signedIn()) return true;
+    $authOverlay.classList.add('open');
+    return false;
+  }
+
+  function updateAuthUI() {
+    const email = window.store.userEmail();
+    $accountRow.classList.toggle('hidden', !email);
+    if (email) $accountEmail.textContent = email;
+    /* re-pull user data whenever auth flips */
+    Promise.all([loadPacks(), loadMarks()]).then(() => {
+      renderPacks();
+      resetGame();
+    });
+  }
 
   /* ── Init ── */
   function shuffle(arr) {
@@ -755,6 +750,7 @@
   $themeToggle.addEventListener('click', toggleTheme);
 
   $favBtn.addEventListener('click', async () => {
+    if (!requireSignIn()) return;
     if (!currentCard) return;
     const on = !isFavorite(currentCard.qkey);
     $favBtn.classList.toggle('active', on);
@@ -767,6 +763,7 @@
   });
 
   $retireBtn.addEventListener('click', () => {
+    if (!requireSignIn()) return;
     if (currentCard) retireCurrentCard();
   });
 
@@ -804,10 +801,29 @@
   });
 
   /* ── Modal Event Listeners ── */
-  $editBtn.addEventListener('click', openModal);
+  $editBtn.addEventListener('click', () => {
+    if (!requireSignIn()) return;
+    openModal();
+  });
   $modalClose.addEventListener('click', closeModal);
   $modalOverlay.addEventListener('click', (e) => {
     if (e.target === $modalOverlay) closeModal();
+  });
+
+  /* ── Auth Event Listeners ── */
+  window.store.onAuthChange(updateAuthUI);
+  $authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const ok = await window.store.signIn($authEmail.value.trim());
+    $authSent.classList.toggle('hidden', !ok);
+    if (!ok) showToast("Couldn't send the link — try again");
+  });
+  $authClose.addEventListener('click', () => $authOverlay.classList.remove('open'));
+  $authOverlay.addEventListener('click', (e) => {
+    if (e.target === $authOverlay) $authOverlay.classList.remove('open');
+  });
+  $signOutBtn.addEventListener('click', async () => {
+    await window.store.signOut();
   });
 
   /* New pack form toggle */

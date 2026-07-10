@@ -132,6 +132,11 @@
         <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
       </div>
 
+      <div class="account-row hidden" id="accountRow">
+        <span class="account-email" id="accountEmail"></span>
+        <button class="btn btn-ghost btn-small" id="signOutBtn">Sign out</button>
+      </div>
+
       <!-- Pack list -->
       <div id="packList"></div>
 
@@ -157,6 +162,30 @@
     </div>
   </div>
 
+  <!-- Sign-in (web version only) -->
+  <div class="modal-overlay" id="authOverlay">
+    <div class="modal-sheet auth-sheet">
+      <div class="modal-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <h2 class="modal-title">Sign in</h2>
+        <button class="modal-close" id="authClose" aria-label="Close">&times;</button>
+      </div>
+      <p class="auth-note">Enter your email and we'll send you a sign-in link.
+        Accounts are invite-only.</p>
+      <form id="authForm" autocomplete="email">
+        <div class="form-group" style="margin-bottom:0.5rem">
+          <input class="form-input" id="authEmail" type="email" placeholder="you@example.com" required>
+        </div>
+        <button class="btn-add" type="submit">Send magic link</button>
+      </form>
+      <p class="auth-note hidden" id="authSent">Check your email — the link signs you in here.</p>
+    </div>
+  </div>
+
+<script src="config.js" defer></script>
+<script src="vendor/supabase.js" defer></script>
+<script src="store-server.js" defer></script>
+<script src="store-supabase.js" defer></script>
 <script src="app.js" defer></script>
 </body>
 </html>

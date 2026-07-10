@@ -1,6 +1,6 @@
 FROM python:3.12-slim
 WORKDIR /app
-COPY server.py index.html style.css app.js questions.json ./
+COPY server.py index.html style.css app.js config.js store-server.js questions.json ./
 ENV DATA_DIR=/data
 RUN mkdir -p /data
 VOLUME /data
