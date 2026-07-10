@@ -14,7 +14,7 @@
 - **No behavior/UX/visual changes:** the game must look and play exactly as before.
 - **Plain script:** `app.js` is a classic script (no `type="module"`).
 - **Tests run via:** `python3 -m unittest test_server.py -v`
-- **Working directory:** repo root `/Users/user/Documents/CodingProjects/date-matching-game` (git repo already initialized; one commit with the design spec exists — do NOT run `git init`).
+- **Working directory:** repo root `the repo root` (git repo already initialized; one commit with the design spec exists — do NOT run `git init`).
 - **Commit messages** end with: `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`
 
 ## Spec deviation note
@@ -62,7 +62,7 @@ __pycache__/
 
 Run:
 ```bash
-cd /Users/user/Documents/CodingProjects/date-matching-game
+cd the repo root
 python3 server.py &
 sleep 1
 curl -s http://127.0.0.1:8080/api/packs
