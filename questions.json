@@ -1,0 +1,542 @@
+[
+  {
+    "text": "What was your favorite childhood TV show?",
+    "rarity": "common",
+    "category": "General"
+  },
+  {
+    "text": "If you could instantly master one skill, what would it be?",
+    "rarity": "common",
+    "category": "General"
+  },
+  {
+    "text": "What is your dream vacation?",
+    "rarity": "common",
+    "category": "General"
+  },
+  {
+    "text": "What food could you eat every week and never get tired of?",
+    "rarity": "common",
+    "category": "General"
+  },
+  {
+    "text": "What is a small thing that always makes you smile?",
+    "rarity": "common",
+    "category": "General"
+  },
+  {
+    "text": "If you won $10 million tomorrow, what is the first thing you'd buy?",
+    "rarity": "common",
+    "category": "General"
+  },
+  {
+    "text": "What is your favorite memory from high school?",
+    "rarity": "common",
+    "category": "General"
+  },
+  {
+    "text": "What is your ideal Saturday?",
+    "rarity": "common",
+    "category": "General"
+  },
+  {
+    "text": "What movie can you watch repeatedly?",
+    "rarity": "common",
+    "category": "General"
+  },
+  {
+    "text": "What animal best represents your personality?",
+    "rarity": "common",
+    "category": "General"
+  },
+  {
+    "text": "What is a risk you took that paid off?",
+    "rarity": "uncommon",
+    "category": "General"
+  },
+  {
+    "text": "What is something you've changed your mind about in the last five years?",
+    "rarity": "uncommon",
+    "category": "General"
+  },
+  {
+    "text": "Who had the biggest positive influence on your life?",
+    "rarity": "uncommon",
+    "category": "General"
+  },
+  {
+    "text": "What is a hobby you've always wanted to try?",
+    "rarity": "uncommon",
+    "category": "General"
+  },
+  {
+    "text": "What is one thing people misunderstand about you?",
+    "rarity": "uncommon",
+    "category": "General"
+  },
+  {
+    "text": "What was your first impression of me?",
+    "rarity": "uncommon",
+    "category": "General"
+  },
+  {
+    "text": "What is one thing you wish more people knew about you?",
+    "rarity": "uncommon",
+    "category": "General"
+  },
+  {
+    "text": "What is the most memorable trip you've ever taken?",
+    "rarity": "uncommon",
+    "category": "General"
+  },
+  {
+    "text": "What is a life lesson you learned the hard way?",
+    "rarity": "uncommon",
+    "category": "General"
+  },
+  {
+    "text": "What was your happiest year and why?",
+    "rarity": "uncommon",
+    "category": "General"
+  },
+  {
+    "text": "When do you feel most loved?",
+    "rarity": "rare",
+    "category": "General"
+  },
+  {
+    "text": "What is something I do that makes your day better?",
+    "rarity": "rare",
+    "category": "General"
+  },
+  {
+    "text": "What is one thing we should do more often together?",
+    "rarity": "rare",
+    "category": "General"
+  },
+  {
+    "text": "What is your favorite memory of us?",
+    "rarity": "rare",
+    "category": "General"
+  },
+  {
+    "text": "What makes you feel appreciated?",
+    "rarity": "rare",
+    "category": "General"
+  },
+  {
+    "text": "What is a tradition you'd like us to start?",
+    "rarity": "rare",
+    "category": "General"
+  },
+  {
+    "text": "What is something you've always wanted us to try together?",
+    "rarity": "rare",
+    "category": "General"
+  },
+  {
+    "text": "What do you think we're best at as a couple?",
+    "rarity": "rare",
+    "category": "General"
+  },
+  {
+    "text": "What is one thing you admire about me that I may not realize?",
+    "rarity": "rare",
+    "category": "General"
+  },
+  {
+    "text": "What is a goal you'd like us to achieve together?",
+    "rarity": "rare",
+    "category": "General"
+  },
+  {
+    "text": "What moment changed your life the most?",
+    "rarity": "epic",
+    "category": "General"
+  },
+  {
+    "text": "What fear has shaped your decisions the most?",
+    "rarity": "epic",
+    "category": "General"
+  },
+  {
+    "text": "What do you hope people remember about you?",
+    "rarity": "epic",
+    "category": "General"
+  },
+  {
+    "text": "What part of your younger self do you miss?",
+    "rarity": "epic",
+    "category": "General"
+  },
+  {
+    "text": "What is something you are still figuring out about yourself?",
+    "rarity": "epic",
+    "category": "General"
+  },
+  {
+    "text": "What achievement are you most proud of?",
+    "rarity": "epic",
+    "category": "General"
+  },
+  {
+    "text": "What would your perfect life look like in ten years?",
+    "rarity": "epic",
+    "category": "General"
+  },
+  {
+    "text": "What challenge taught you the most about yourself?",
+    "rarity": "epic",
+    "category": "General"
+  },
+  {
+    "text": "What belief guides your life?",
+    "rarity": "epic",
+    "category": "General"
+  },
+  {
+    "text": "What is something you wish you worried less about?",
+    "rarity": "epic",
+    "category": "General"
+  },
+  {
+    "text": "What is something you've never told many people?",
+    "rarity": "legendary",
+    "category": "General"
+  },
+  {
+    "text": "What is your biggest insecurity?",
+    "rarity": "legendary",
+    "category": "General"
+  },
+  {
+    "text": "What do you think is your greatest strength and greatest weakness?",
+    "rarity": "legendary",
+    "category": "General"
+  },
+  {
+    "text": "When have you felt most alone?",
+    "rarity": "legendary",
+    "category": "General"
+  },
+  {
+    "text": "What is a dream you've quietly given up on?",
+    "rarity": "legendary",
+    "category": "General"
+  },
+  {
+    "text": "What do you think your future self would thank you for?",
+    "rarity": "legendary",
+    "category": "General"
+  },
+  {
+    "text": "What is something you wish people understood about your struggles?",
+    "rarity": "legendary",
+    "category": "General"
+  },
+  {
+    "text": "What part of our relationship are you most grateful for?",
+    "rarity": "legendary",
+    "category": "General"
+  },
+  {
+    "text": "What is a question you've always wanted someone to ask you?",
+    "rarity": "legendary",
+    "category": "General"
+  },
+  {
+    "text": "What truth about yourself took the longest to accept?",
+    "rarity": "legendary",
+    "category": "General"
+  },
+  {
+    "text": "What is one place you'd love for us to visit together?",
+    "rarity": "common",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is a hobby we could start as a couple?",
+    "rarity": "common",
+    "category": "Future Us"
+  },
+  {
+    "text": "What would your ideal date night look like five years from now?",
+    "rarity": "common",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is one thing you'd like us to do more often as a family?",
+    "rarity": "common",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is something small we could do every week that would make life better?",
+    "rarity": "common",
+    "category": "Future Us"
+  },
+  {
+    "text": "If we had a free weekend with no responsibilities, what would you want to do?",
+    "rarity": "common",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is one holiday tradition you'd like to create?",
+    "rarity": "common",
+    "category": "Future Us"
+  },
+  {
+    "text": "What would our dream backyard include?",
+    "rarity": "common",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is a skill you'd like us both to learn?",
+    "rarity": "common",
+    "category": "Future Us"
+  },
+  {
+    "text": "What kind of pets would you want in the future?",
+    "rarity": "common",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is a family tradition from your childhood that you'd like to continue?",
+    "rarity": "uncommon",
+    "category": "Future Us"
+  },
+  {
+    "text": "What tradition would you like to create from scratch?",
+    "rarity": "uncommon",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is one thing you hope our children remember about growing up?",
+    "rarity": "uncommon",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is a goal you'd like us to accomplish in the next two years?",
+    "rarity": "uncommon",
+    "category": "Future Us"
+  },
+  {
+    "text": "What would our dream family vacation look like?",
+    "rarity": "uncommon",
+    "category": "Future Us"
+  },
+  {
+    "text": "If we moved anywhere in the world for a year, where would you choose?",
+    "rarity": "uncommon",
+    "category": "Future Us"
+  },
+  {
+    "text": "What kind of adventures should we prioritize while we're younger?",
+    "rarity": "uncommon",
+    "category": "Future Us"
+  },
+  {
+    "text": "What project would be fun for us to work on together?",
+    "rarity": "uncommon",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is one thing we should start saving for now?",
+    "rarity": "uncommon",
+    "category": "Future Us"
+  },
+  {
+    "text": "What does a successful year for us look like?",
+    "rarity": "uncommon",
+    "category": "Future Us"
+  },
+  {
+    "text": "What values do you most want our children to learn from us?",
+    "rarity": "rare",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is something you hope never changes about our relationship?",
+    "rarity": "rare",
+    "category": "Future Us"
+  },
+  {
+    "text": "What kind of grandparents do you hope we'll become someday?",
+    "rarity": "rare",
+    "category": "Future Us"
+  },
+  {
+    "text": "What do you think our biggest adventure together has yet to be?",
+    "rarity": "rare",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is one dream you've never seriously discussed with me?",
+    "rarity": "rare",
+    "category": "Future Us"
+  },
+  {
+    "text": "What would make you feel that we've truly built a great life together?",
+    "rarity": "rare",
+    "category": "Future Us"
+  },
+  {
+    "text": "What kind of home would make you happiest?",
+    "rarity": "rare",
+    "category": "Future Us"
+  },
+  {
+    "text": "What do you think we'll laugh about when we're 80?",
+    "rarity": "rare",
+    "category": "Future Us"
+  },
+  {
+    "text": "What challenge do you think we'll overcome together in the future?",
+    "rarity": "rare",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is one thing you hope we always make time for?",
+    "rarity": "rare",
+    "category": "Future Us"
+  },
+  {
+    "text": "If we were celebrating our 50th anniversary, what would you hope we could say about our life together?",
+    "rarity": "epic",
+    "category": "Future Us"
+  },
+  {
+    "text": "What do you think is the most important thing we're building right now?",
+    "rarity": "epic",
+    "category": "Future Us"
+  },
+  {
+    "text": "What sacrifices are worth making for our future?",
+    "rarity": "epic",
+    "category": "Future Us"
+  },
+  {
+    "text": "What kind of legacy would you like our family to leave behind?",
+    "rarity": "epic",
+    "category": "Future Us"
+  },
+  {
+    "text": "What do you hope our children learn from watching our marriage?",
+    "rarity": "epic",
+    "category": "Future Us"
+  },
+  {
+    "text": "What are we currently taking for granted that we'll appreciate later?",
+    "rarity": "epic",
+    "category": "Future Us"
+  },
+  {
+    "text": "What dream feels unrealistic today but might be possible someday?",
+    "rarity": "epic",
+    "category": "Future Us"
+  },
+  {
+    "text": "What would our perfect retirement look like?",
+    "rarity": "epic",
+    "category": "Future Us"
+  },
+  {
+    "text": "How do you think we'll be different in ten years?",
+    "rarity": "epic",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is one future goal that scares you because it matters so much?",
+    "rarity": "epic",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is your biggest hope for our life together?",
+    "rarity": "legendary",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is your biggest fear about the future?",
+    "rarity": "legendary",
+    "category": "Future Us"
+  },
+  {
+    "text": "If we could guarantee one thing about our future, what would you choose?",
+    "rarity": "legendary",
+    "category": "Future Us"
+  },
+  {
+    "text": "What do you hope people say about our relationship after we're gone?",
+    "rarity": "legendary",
+    "category": "Future Us"
+  },
+  {
+    "text": "What part of our future are you most excited about?",
+    "rarity": "legendary",
+    "category": "Future Us"
+  },
+  {
+    "text": "What challenge do you think will test us the most?",
+    "rarity": "legendary",
+    "category": "Future Us"
+  },
+  {
+    "text": "What do you think love will look like for us in 30 years?",
+    "rarity": "legendary",
+    "category": "Future Us"
+  },
+  {
+    "text": "What would make you feel that your life was well-lived?",
+    "rarity": "legendary",
+    "category": "Future Us"
+  },
+  {
+    "text": "What promise do you hope we always keep to each other?",
+    "rarity": "legendary",
+    "category": "Future Us"
+  },
+  {
+    "text": "What is a dream you hope we never stop pursuing together?",
+    "rarity": "legendary",
+    "category": "Future Us"
+  },
+  {
+    "text": "We are both 90 years old, sitting on a porch together. What stories are we telling?",
+    "rarity": "mythic",
+    "category": "General"
+  },
+  {
+    "text": "If we could design our perfect future from scratch, what would it look like?",
+    "rarity": "mythic",
+    "category": "General"
+  },
+  {
+    "text": "What is something you hope we accomplish together that neither of us could accomplish alone?",
+    "rarity": "mythic",
+    "category": "General"
+  },
+  {
+    "text": "Imagine our children describing us 30 years from now. What do you hope they say?",
+    "rarity": "mythic",
+    "category": "General"
+  },
+  {
+    "text": "What does a life with no regrets look like for us?",
+    "rarity": "mythic",
+    "category": "General"
+  },
+  {
+    "text": "What is the greatest adventure we haven't started yet?",
+    "rarity": "mythic",
+    "category": "General"
+  },
+  {
+    "text": "If we could send one message to ourselves 20 years in the future, what would it be?",
+    "rarity": "mythic",
+    "category": "General"
+  },
+  {
+    "text": "What are we building together that will outlast us?",
+    "rarity": "mythic",
+    "category": "General"
+  }
+]
