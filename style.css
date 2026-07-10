@@ -1032,3 +1032,40 @@
     body { padding: 2rem; }
     .card { padding: 2.25rem 2rem 2rem; }
   }
+
+/* ── Card mark buttons (favorite / retire) ── */
+.card-marks {
+  margin-left: auto;
+  display: flex;
+  gap: 0.25rem;
+}
+.card-mark-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.375rem;
+  border-radius: 0.5rem;
+  color: var(--text-muted, currentColor);
+  opacity: 0.55;
+  line-height: 0;
+}
+.card-mark-btn svg { width: 1.125rem; height: 1.125rem; }
+.card-mark-btn:hover, .card-mark-btn:focus-visible { opacity: 1; }
+.card-mark-btn.active {
+  opacity: 1;
+  color: var(--primary);
+}
+.card-mark-btn.active svg { fill: currentColor; }
+
+/* ── Toast action button (e.g. Undo) ── */
+.toast-action {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  margin-left: 0.75rem;
+  padding: 0;
+}

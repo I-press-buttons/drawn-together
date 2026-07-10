@@ -328,6 +328,8 @@
   const $rarityLabel  = document.getElementById('rarityLabel');
   const $cardQuestion = document.getElementById('cardQuestion');
   const $cardCategory = document.getElementById('cardCategory');
+  const $favBtn       = document.getElementById('favBtn');
+  const $retireBtn    = document.getElementById('retireBtn');
   const $answeredBtn  = document.getElementById('answeredBtn');
   const $skipBtn      = document.getElementById('skipBtn');
   const $gameOver     = document.getElementById('gameOver');
@@ -412,6 +414,9 @@
     $cardStage.classList.remove('animate-in');
     void $cardStage.offsetWidth;
     $cardStage.classList.add('animate-in');
+
+    $favBtn.classList.toggle('active', isFavorite(currentCard.qkey));
+    $favBtn.setAttribute('aria-pressed', isFavorite(currentCard.qkey) ? 'true' : 'false');
   }
 
   function answerCard() {
@@ -547,12 +552,19 @@
     return div.innerHTML;
   }
 
-  function showToast(msg) {
+  function showToast(msg, action) {
     const existing = document.querySelector('.toast');
     if (existing) existing.remove();
     const el = document.createElement('div');
     el.className = 'toast';
     el.textContent = msg;
+    if (action) {
+      const btn = document.createElement('button');
+      btn.className = 'toast-action';
+      btn.textContent = action.label;
+      btn.addEventListener('click', () => { el.remove(); action.fn(); });
+      el.appendChild(btn);
+    }
     document.body.appendChild(el);
     el.addEventListener('animationend', (e) => {
       if (e.animationName === 'toastOut') el.remove();
@@ -565,6 +577,45 @@
   $skipBtn.addEventListener('click', skipCard);
   $resetBtn.addEventListener('click', resetGame);
   $themeToggle.addEventListener('click', toggleTheme);
+
+  $favBtn.addEventListener('click', async () => {
+    if (!currentCard) return;
+    const on = !isFavorite(currentCard.qkey);
+    $favBtn.classList.toggle('active', on);
+    $favBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    if (await setMark('favorites', currentCard.qkey, on)) {
+      if (on) { sessionHearts++; showToast('Saved to your greatest hits'); }
+    } else {
+      renderCard();
+    }
+  });
+
+  $retireBtn.addEventListener('click', () => {
+    if (currentCard) retireCurrentCard();
+  });
+
+  function retireCurrentCard() {
+    const card = currentCard;
+    currentCard = null;
+    setMark('retired', card.qkey, true);
+
+    $cardStage.classList.remove('animate-in');
+    $cardStage.classList.add('animate-out');
+    setTimeout(() => {
+      updateUI();
+      showEmptyState();
+      $drawBtn.focus();
+      showToast('Retired — it won\'t come up again', {
+        label: 'Undo',
+        fn: async () => {
+          if (await setMark('retired', card.qkey, false)) {
+            deck.splice(Math.floor(Math.random() * (deck.length + 1)), 0, card);
+            updateUI();
+          }
+        },
+      });
+    }, 300);
+  }
 
   $scoreToggle.addEventListener('change', () => {
     toggleScore($scoreToggle.checked);
