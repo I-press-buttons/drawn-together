@@ -204,6 +204,57 @@
     };
   }
 
+  function applyRehydratedSession(state) {
+    deck = state.deck;
+    discard = state.discard;
+    currentCard = state.currentCard;
+    score = state.score;
+    questionsAnswered = state.questionsAnswered;
+    rarestAnswered = state.rarestAnswered;
+    sessionHearts = state.sessionHearts;
+    showAllAnswered = false;
+    updateUI();
+    renderAnsweredList();
+    if (currentCard) {
+      renderCard();
+      showCard();
+    } else {
+      showEmptyState();
+    }
+  }
+
+  function hideResumePrompt() {
+    $resumePrompt.classList.add('hidden');
+    $drawControls.classList.remove('hidden');
+  }
+
+  function showResumePrompt(state) {
+    $drawControls.classList.add('hidden');
+    $resumePrompt.classList.remove('hidden');
+    const remaining = state.deck.length + (state.currentCard ? 1 : 0);
+    $resumeText.innerHTML =
+      `You have a game in progress — <strong>${remaining}</strong> card${remaining === 1 ? '' : 's'} left, ` +
+      `score <strong>${state.score}</strong>.`;
+    $resumeBtn.onclick = () => {
+      hideResumePrompt();
+      applyRehydratedSession(state);
+    };
+    $startFreshBtn.onclick = async () => {
+      hideResumePrompt();
+      await window.store.clearSession();
+      resetGame();
+    };
+  }
+
+  async function tryResumeOrStart() {
+    const raw = await window.store.loadSession();
+    if (!raw) { resetGame(); return; }
+    const state = rehydrateSession(raw);
+    const hasContent = state.deck.length > 0 || state.discard.length > 0 || !!state.currentCard;
+    if (!hasContent) { resetGame(); return; }
+    showResumePrompt(state);
+  }
+
   function getEnabledPackCount() {
     return questionPacks.filter(p => p.enabled).length;
   }
@@ -467,6 +518,11 @@
   const $emptyState   = document.getElementById('emptyState');
   const $remainingCount = document.getElementById('remainingCount');
   const $drawBtn      = document.getElementById('drawBtn');
+  const $drawControls = document.getElementById('drawControls');
+  const $resumePrompt = document.getElementById('resumePrompt');
+  const $resumeText   = document.getElementById('resumeText');
+  const $resumeBtn    = document.getElementById('resumeBtn');
+  const $startFreshBtn = document.getElementById('startFreshBtn');
   const $cardStage    = document.getElementById('cardStage');
   const $activeCard   = document.getElementById('activeCard');
   const $rarityDot    = document.getElementById('rarityDot');
@@ -516,10 +572,10 @@
     const email = window.store.userEmail();
     $accountRow.classList.toggle('hidden', !email);
     if (email) $accountEmail.textContent = email;
-    /* re-pull user data whenever auth flips */
+    /* re-pull user data whenever auth flips, then offer to resume that user's session */
     Promise.all([loadPacks(), loadMarks()]).then(() => {
       renderPacks();
-      resetGame();
+      tryResumeOrStart();
     });
   }
 
@@ -1007,7 +1063,7 @@
   (async () => {
     await loadQuestions();
     await Promise.all([loadPacks(), loadMarks()]);
-    resetGame();
+    await tryResumeOrStart();
     toggleScore(true);
     updateDeckCount();
   })();

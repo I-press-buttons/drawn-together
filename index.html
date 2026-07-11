@@ -69,12 +69,22 @@
             <div class="deck-card"></div>
             <div class="deck-card"></div>
           </div>
-          <p class="remaining-badge" id="remainingBadge">
-            <strong id="remainingCount">108</strong> questions in the deck
-          </p>
-          <button class="btn btn-primary" id="drawBtn" autofocus>
-            Draw a Card
-          </button>
+          <div class="draw-controls" id="drawControls">
+            <p class="remaining-badge" id="remainingBadge">
+              <strong id="remainingCount">108</strong> questions in the deck
+            </p>
+            <button class="btn btn-primary" id="drawBtn" autofocus>
+              Draw a Card
+            </button>
+          </div>
+
+          <div class="resume-prompt hidden" id="resumePrompt">
+            <p class="resume-text" id="resumeText"></p>
+            <div class="resume-actions">
+              <button class="btn btn-primary" id="resumeBtn" type="button">Resume</button>
+              <button class="btn btn-ghost" id="startFreshBtn" type="button">Start Fresh</button>
+            </div>
+          </div>
         </div>
 
         <!-- Active Card -->
