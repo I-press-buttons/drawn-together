@@ -515,12 +515,10 @@
     showEmptyState();
     $gameOver.classList.add('hidden');
     showAllAnswered = false;
-    $answeredList.innerHTML = '';
     $answeredList.classList.remove('open', 'expanded');
     $answeredChevron.classList.remove('open');
     $answeredMobileToggle.setAttribute('aria-expanded', 'false');
-    $answeredShowAll.classList.add('hidden');
-    $answeredShowAll.textContent = 'Show all';
+    renderAnsweredList();
     $drawBtn.focus();
   }
 
