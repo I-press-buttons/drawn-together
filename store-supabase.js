@@ -87,6 +87,24 @@
       const { error } = await op;
       return error ? null : this.loadMarks();
     },
+    async loadSession() {
+      if (!session) return null;
+      const { data, error } = await client.from('sessions')
+        .select('data').eq('user_id', session.user.id).maybeSingle();
+      if (error || !data) return null;
+      return data.data;
+    },
+    async saveSession(sessionState) {
+      if (!session) return false;
+      const { error } = await client.from('sessions')
+        .upsert({ user_id: session.user.id, data: sessionState, updated_at: new Date().toISOString() });
+      return !error;
+    },
+    async clearSession() {
+      if (!session) return false;
+      const { error } = await client.from('sessions').delete().eq('user_id', session.user.id);
+      return !error;
+    },
 
     signedIn() { return !!session; },
     userEmail() { return session ? session.user.email : null; },

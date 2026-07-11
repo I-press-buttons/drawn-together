@@ -25,9 +25,16 @@ create table if not exists public.marks (
   primary key (user_id, list, qkey)
 );
 
+create table if not exists public.sessions (
+  user_id uuid primary key default auth.uid() references auth.users(id) on delete cascade,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
 alter table public.packs enable row level security;
 alter table public.questions enable row level security;
 alter table public.marks enable row level security;
+alter table public.sessions enable row level security;
 
 create policy "own packs" on public.packs
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
@@ -40,4 +47,7 @@ create policy "own questions" on public.questions
   );
 
 create policy "own marks" on public.marks
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+create policy "own session" on public.sessions
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
