@@ -173,6 +173,37 @@
     return all.filter(q => !isRetired(q.qkey));
   }
 
+  /* ── Session (resume) ── */
+  function serializeSession() {
+    return {
+      deckKeys: deck.map(q => q.qkey),
+      discardKeys: discard.map(q => q.qkey),
+      currentKey: currentCard ? currentCard.qkey : null,
+      score,
+      questionsAnswered,
+      rarestKey: rarestAnswered ? rarestAnswered.qkey : null,
+      sessionHearts,
+    };
+  }
+
+  function saveCurrentSession() {
+    window.store.saveSession(serializeSession()).catch(() => {});
+  }
+
+  function rehydrateSession(raw) {
+    const validKeys = new Set(getAllQuestions().map(q => q.qkey));
+    const resolve = (keys) => keys.filter(k => validKeys.has(k)).map(findQuestionByKey);
+    return {
+      deck: resolve(raw.deckKeys || []),
+      discard: resolve(raw.discardKeys || []),
+      currentCard: raw.currentKey && validKeys.has(raw.currentKey) ? findQuestionByKey(raw.currentKey) : null,
+      score: raw.score || 0,
+      questionsAnswered: raw.questionsAnswered || 0,
+      rarestAnswered: raw.rarestKey && validKeys.has(raw.rarestKey) ? findQuestionByKey(raw.rarestKey) : null,
+      sessionHearts: raw.sessionHearts || 0,
+    };
+  }
+
   function getEnabledPackCount() {
     return questionPacks.filter(p => p.enabled).length;
   }
@@ -520,6 +551,7 @@
     $answeredMobileToggle.setAttribute('aria-expanded', 'false');
     renderAnsweredList();
     $drawBtn.focus();
+    saveCurrentSession();
   }
 
   function startFavoritesRound() {
@@ -549,6 +581,7 @@
     renderCard();
     showCard();
     updateUI();
+    saveCurrentSession();
   }
 
   function renderCard() {
@@ -591,6 +624,13 @@
     discard.unshift({ ...currentCard, id: Date.now() });
     currentCard = null;
 
+    /* a finished deck has nothing left to resume; otherwise persist progress */
+    if (deck.length === 0) {
+      window.store.clearSession().catch(() => {});
+    } else {
+      saveCurrentSession();
+    }
+
     /* animate out */
     $cardStage.classList.remove('animate-in');
     $cardStage.classList.add('animate-out');
@@ -613,6 +653,7 @@
     const idx = Math.floor(Math.random() * (deck.length + 1));
     deck.splice(idx, 0, currentCard);
     currentCard = null;
+    saveCurrentSession();
 
     $cardStage.classList.remove('animate-in');
     $cardStage.classList.add('animate-out');
