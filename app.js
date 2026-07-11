@@ -600,6 +600,7 @@
     sessionHearts = 0;
     updateUI();
     showEmptyState();
+    hideResumePrompt();
     $gameOver.classList.add('hidden');
     showAllAnswered = false;
     $answeredList.classList.remove('open', 'expanded');
