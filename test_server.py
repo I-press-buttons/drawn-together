@@ -256,6 +256,78 @@ class PackAPITest(unittest.TestCase):
         status, err = self.request("PUT", "/api/packs/999/questions/1", {"text": "Q?"})
         self.assertEqual(status, 404)
 
+    # ── Session (resume) ──
+
+    def test_session_initially_null(self):
+        status, body = self.request("GET", "/api/session")
+        self.assertEqual(status, 200)
+        self.assertIsNone(body["session"])
+
+    def test_save_and_load_session(self):
+        session = {
+            "deckKeys": ["b1", "b2"], "discardKeys": [], "currentKey": None,
+            "score": 3, "questionsAnswered": 1, "rarestKey": None, "sessionHearts": 0,
+        }
+        status, saved = self.request("PUT", "/api/session", session)
+        self.assertEqual(status, 200)
+        self.assertEqual(saved["session"], session)
+        status, body = self.request("GET", "/api/session")
+        self.assertEqual(status, 200)
+        self.assertEqual(body["session"], session)
+
+    def test_save_session_overwrites_previous(self):
+        self.request("PUT", "/api/session", {"deckKeys": ["b1"]})
+        self.request("PUT", "/api/session", {"deckKeys": ["b2", "b3"]})
+        status, body = self.request("GET", "/api/session")
+        self.assertEqual(status, 200)
+        self.assertEqual(body["session"], {"deckKeys": ["b2", "b3"]})
+
+    def test_clear_session(self):
+        self.request("PUT", "/api/session", {"deckKeys": ["b1"]})
+        status, body = self.request("DELETE", "/api/session")
+        self.assertEqual(status, 200)
+        self.assertEqual(body, {"ok": True})
+        status, body = self.request("GET", "/api/session")
+        self.assertEqual(status, 200)
+        self.assertIsNone(body["session"])
+
+    def test_clear_session_when_none_saved(self):
+        status, body = self.request("DELETE", "/api/session")
+        self.assertEqual(status, 200)
+        self.assertEqual(body, {"ok": True})
+
+    def test_save_session_rejects_non_object_body(self):
+        status, err = self.request("PUT", "/api/session", ["not", "an", "object"])
+        self.assertEqual(status, 400)
+        self.assertIn("error", err)
+        status, body = self.request("GET", "/api/session")
+        self.assertIsNone(body["session"])
+
+    def test_marks_endpoint_excludes_session(self):
+        self.request("PUT", "/api/session", {"deckKeys": ["b1"]})
+        status, marks = self.request("GET", "/api/marks")
+        self.assertEqual(status, 200)
+        self.assertEqual(set(marks.keys()), {"favorites", "retired"})
+
+    def test_session_persists_to_user_data_file(self):
+        session = {"deckKeys": ["b7"]}
+        self.request("PUT", "/api/session", session)
+        on_disk = json.loads(server.USER_DATA_FILE.read_text())
+        self.assertEqual(on_disk["session"], session)
+
+    def test_saving_session_preserves_existing_marks(self):
+        self.request("POST", "/api/marks/favorites/b12")
+        self.request("PUT", "/api/session", {"deckKeys": ["b1"]})
+        status, marks = self.request("GET", "/api/marks")
+        self.assertEqual(marks["favorites"], ["b12"])
+
+    def test_adding_mark_preserves_existing_session(self):
+        session = {"deckKeys": ["b1"]}
+        self.request("PUT", "/api/session", session)
+        self.request("POST", "/api/marks/favorites/b12")
+        status, body = self.request("GET", "/api/session")
+        self.assertEqual(body["session"], session)
+
     # ── Mark cleanup ──
 
     def test_deleting_question_removes_its_marks(self):

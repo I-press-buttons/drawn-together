@@ -42,15 +42,34 @@ def save_packs(packs):
 def load_user_data():
     if USER_DATA_FILE.exists():
         try:
-            data = json.loads(USER_DATA_FILE.read_text())
-            return {k: list(data.get(k, [])) for k in MARK_LISTS}
+            raw = json.loads(USER_DATA_FILE.read_text())
         except (json.JSONDecodeError, OSError):
-            pass
-    return {k: [] for k in MARK_LISTS}
+            raw = {}
+    else:
+        raw = {}
+    data = {k: list(raw.get(k, [])) for k in MARK_LISTS}
+    data["session"] = raw.get("session")
+    return data
 
 
 def save_user_data(data):
     USER_DATA_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+
+
+def load_session():
+    return load_user_data().get("session")
+
+
+def save_session(session):
+    data = load_user_data()
+    data["session"] = session
+    save_user_data(data)
+
+
+def clear_session():
+    data = load_user_data()
+    data["session"] = None
+    save_user_data(data)
 
 
 def remove_marks(predicate):
@@ -95,7 +114,7 @@ def handle_mark_change(handler, path, add):
         elif not add and qkey in data[list_name]:
             data[list_name].remove(qkey)
             save_user_data(data)
-    json_response(handler, data)
+    json_response(handler, {k: data[k] for k in MARK_LISTS})
     return True
 
 
@@ -130,7 +149,13 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
 
         # ── User marks (favorites / retired) ──
         if self.path == "/api/marks":
-            json_response(self, load_user_data())
+            data = load_user_data()
+            json_response(self, {k: data[k] for k in MARK_LISTS})
+            return
+
+        # ── Saved session (resume) ──
+        if self.path == "/api/session":
+            json_response(self, {"session": load_session()})
             return
 
         # ── Static files ──
@@ -201,6 +226,19 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
         json_response(self, {"error": "Not found"}, 404)
 
     def do_PUT(self):
+        # ── Save session (resume) ──
+        if self.path == "/api/session":
+            body = read_json_body(self)
+            if body is None:
+                return
+            if not isinstance(body, dict):
+                json_response(self, {"error": "Session must be a JSON object"}, 400)
+                return
+            with PACKS_LOCK:
+                save_session(body)
+            json_response(self, {"session": body})
+            return
+
         # ── Update a pack (toggle enabled, rename) ──
         m = re.match(r"^/api/packs/(\d+)$", self.path)
         if m:
@@ -265,6 +303,13 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
         json_response(self, {"error": "Not found"}, 404)
 
     def do_DELETE(self):
+        # ── Clear session (resume) ──
+        if self.path == "/api/session":
+            with PACKS_LOCK:
+                clear_session()
+            json_response(self, {"ok": True})
+            return
+
         # ── Delete entire pack ──
         m = re.match(r"^/api/packs/(\d+)$", self.path)
         if m:
