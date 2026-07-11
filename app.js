@@ -27,6 +27,7 @@
   let scoreEnabled = true;
   let questionsAnswered = 0;
   let rarestAnswered = null;
+  let showAllAnswered = false;
 
   /* ── Theme ── */
   function getTheme() {
@@ -448,10 +449,11 @@
   const $gameOver     = document.getElementById('gameOver');
   const $finalScores  = document.getElementById('finalScores');
   const $resetBtn     = document.getElementById('resetBtn');
-  const $discardToggle = document.getElementById('discardToggle');
-  const $discardChevron = document.getElementById('discardChevron');
-  const $discardPile  = document.getElementById('discardPile');
-  const $discardCount = document.getElementById('discardCount');
+  const $answeredMobileToggle = document.getElementById('answeredMobileToggle');
+  const $answeredChevron = document.getElementById('answeredChevron');
+  const $answeredList = document.getElementById('answeredList');
+  const $answeredCount = document.getElementById('answeredCount');
+  const $answeredShowAll = document.getElementById('answeredShowAll');
   const $scoreValue   = document.getElementById('scoreValue');
   const $scoreDisplay = document.getElementById('scoreDisplay');
   const $scoreToggle  = document.getElementById('scoreToggle');
@@ -512,10 +514,11 @@
     updateUI();
     showEmptyState();
     $gameOver.classList.add('hidden');
-    $discardPile.innerHTML = '';
-    $discardPile.classList.remove('open');
-    $discardChevron.classList.remove('open');
-    $discardToggle.setAttribute('aria-expanded', 'false');
+    showAllAnswered = false;
+    $answeredList.classList.remove('open', 'expanded');
+    $answeredChevron.classList.remove('open');
+    $answeredMobileToggle.setAttribute('aria-expanded', 'false');
+    renderAnsweredList();
     $drawBtn.focus();
   }
 
@@ -594,7 +597,7 @@
 
     setTimeout(() => {
       updateUI();
-      renderDiscardPile();
+      renderAnsweredList();
       if (deck.length === 0) {
         showGameOver();
       } else {
@@ -671,27 +674,31 @@
     el.addEventListener('animationend', () => el.remove());
   }
 
-  function renderDiscardPile() {
+  function renderAnsweredList() {
+    const visible = showAllAnswered ? discard : discard.slice(0, 10);
     if (discard.length === 0) {
-      $discardPile.innerHTML = '<p class="discard-empty">No questions answered yet</p>';
+      $answeredList.innerHTML = '<p class="answered-empty">No questions answered yet</p>';
     } else {
-      $discardPile.innerHTML = discard.map((q) => {
+      $answeredList.innerHTML = visible.map((q) => {
         const r = RARITY[q.rarity];
         return `
-          <div class="discard-item">
-            <span class="discard-item-dot" style="background: ${r.color}"></span>
-            <span class="discard-item-text" title="${escapeHTML(q.text)}">${escapeHTML(q.text)}</span>
-            ${scoreEnabled ? `<span class="discard-item-score" style="color: ${r.color}">+${r.points}</span>` : ''}
+          <div class="answered-item">
+            <span class="answered-item-dot" style="background: ${r.color}"></span>
+            <span class="answered-item-text" title="${escapeHTML(q.text)}">${escapeHTML(q.text)}</span>
+            ${scoreEnabled ? `<span class="answered-item-score" style="color: ${r.color}">+${r.points}</span>` : ''}
           </div>
         `;
       }).join('');
     }
-    $discardCount.textContent = discard.length;
+    $answeredList.classList.toggle('expanded', showAllAnswered);
+    $answeredCount.textContent = discard.length;
+    $answeredShowAll.classList.toggle('hidden', discard.length <= 10);
+    $answeredShowAll.textContent = showAllAnswered ? 'Show recent' : `Show all (${discard.length})`;
   }
 
   function updateUI() {
     $remainingCount.textContent = deck.length;
-    $discardCount.textContent = discard.length;
+    $answeredCount.textContent = discard.length;
 
     /* score display */
     if (scoreEnabled) {
@@ -710,7 +717,7 @@
       $scoreTrack.classList.remove('active');
     }
     updateUI();
-    renderDiscardPile();
+    renderAnsweredList();
   }
 
   function escapeHTML(str) {
@@ -794,10 +801,15 @@
     toggleScore($scoreToggle.checked);
   });
 
-  $discardToggle.addEventListener('click', () => {
-    const isOpen = $discardPile.classList.toggle('open');
-    $discardChevron.classList.toggle('open', isOpen);
-    $discardToggle.setAttribute('aria-expanded', isOpen);
+  $answeredMobileToggle.addEventListener('click', () => {
+    const isOpen = $answeredList.classList.toggle('open');
+    $answeredChevron.classList.toggle('open', isOpen);
+    $answeredMobileToggle.setAttribute('aria-expanded', isOpen);
+  });
+
+  $answeredShowAll.addEventListener('click', () => {
+    showAllAnswered = !showAllAnswered;
+    renderAnsweredList();
   });
 
   /* ── Modal Event Listeners ── */
