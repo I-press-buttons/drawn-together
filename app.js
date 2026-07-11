@@ -250,7 +250,7 @@
     const raw = await window.store.loadSession();
     if (!raw) { resetGame(); return; }
     const state = rehydrateSession(raw);
-    const hasContent = state.deck.length > 0 || state.discard.length > 0 || !!state.currentCard;
+    const hasContent = state.discard.length > 0 || !!state.currentCard || state.score > 0;
     if (!hasContent) { resetGame(); return; }
     showResumePrompt(state);
   }
