@@ -56,6 +56,25 @@
         return json(res);
       } catch (e) { return null; }
     },
+    async loadSession() {
+      try {
+        const data = await json(await fetch('/api/session'));
+        return data ? data.session : null;
+      } catch (e) { return null; }
+    },
+    async saveSession(session) {
+      try {
+        const res = await fetch('/api/session', {
+          method: 'PUT', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(session),
+        });
+        return res.ok;
+      } catch (e) { return false; }
+    },
+    async clearSession() {
+      try { return (await fetch('/api/session', { method: 'DELETE' })).ok; }
+      catch (e) { return false; }
+    },
 
     /* Auth is a no-op on the local server. */
     signedIn() { return true; },
