@@ -159,6 +159,12 @@
       <!-- Pack list -->
       <div id="packList"></div>
 
+      <!-- Sign-in gate shown in place of the new-pack controls when signed out (web backend) -->
+      <div class="pack-gate hidden" id="packGate">
+        <p class="pack-gate-text">Sign in to create and edit question packs</p>
+        <button class="btn btn-ghost" id="packGateSignInBtn" type="button">Sign in</button>
+      </div>
+
       <!-- New pack button -->
       <button class="btn btn-ghost" id="newPackBtn" style="width:100%;margin-top:0.75rem">
         + New Pack

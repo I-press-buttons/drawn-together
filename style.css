@@ -1253,6 +1253,21 @@
 .auth-sheet { max-width: min(90vw, 420px); }
 .auth-note { color: var(--ink-muted); font-size: 0.875rem; margin: 0.5rem 0 0.75rem; }
 .auth-note.hidden { display: none; }
+/* Sign-in gate replacing "+ New Pack" when signed out (web backend) */
+.pack-gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px dashed var(--card-border);
+  border-radius: 0.75rem;
+  text-align: center;
+}
+.pack-gate.hidden { display: none; }
+.pack-gate-text { color: var(--ink-muted); font-size: 0.875rem; margin: 0; }
+#newPackBtn.hidden { display: none; }
 .account-control { display: flex; align-items: center; flex-shrink: 0; }
 .account-control.hidden { display: none; }
 .account-pill {

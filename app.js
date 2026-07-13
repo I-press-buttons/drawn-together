@@ -273,6 +273,15 @@
     openPackId = null;
   }
 
+  /* Signed out on the web backend: replace "+ New Pack" with a sign-in prompt.
+     Server backend: signedIn() is always true, so the gate never shows. */
+  function updatePackGate() {
+    const gated = window.store.backend === 'supabase' && !window.store.signedIn();
+    $newPackBtn.classList.toggle('hidden', gated);
+    $packGate.classList.toggle('hidden', !gated);
+    if (gated) $newPackForm.style.display = 'none';
+  }
+
   function renderPacks() {
     const container = document.getElementById('packList');
     const totalCustom = questionPacks.reduce((s, p) => s + p.questions.length, 0);
@@ -402,6 +411,7 @@
 
     container.innerHTML = html;
     bindPackEvents();
+    updatePackGate();
   }
 
   function bindPackEvents() {
@@ -551,6 +561,9 @@
   const $modalClose   = document.getElementById('modalClose');
   const $newPackForm = document.getElementById('newPackForm');
   const $newPackName = document.getElementById('newPackName');
+  const $newPackBtn  = document.getElementById('newPackBtn');
+  const $packGate    = document.getElementById('packGate');
+  const $packGateSignInBtn = document.getElementById('packGateSignInBtn');
   const $mainArea     = document.getElementById('mainArea');
   const $authOverlay   = document.getElementById('authOverlay');
   const $authClose     = document.getElementById('authClose');
@@ -923,10 +936,7 @@
   });
 
   /* ── Modal Event Listeners ── */
-  $editBtn.addEventListener('click', () => {
-    if (!requireSignIn()) return;
-    openModal();
-  });
+  $editBtn.addEventListener('click', openModal);
   $modalClose.addEventListener('click', closeModal);
   $modalOverlay.addEventListener('click', (e) => {
     if (e.target === $modalOverlay) closeModal();
@@ -935,6 +945,7 @@
   /* ── Auth Event Listeners ── */
   window.store.onAuthChange(updateAuthUI);
   $signInBtn.addEventListener('click', () => $authOverlay.classList.add('open'));
+  $packGateSignInBtn.addEventListener('click', () => $authOverlay.classList.add('open'));
   $authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const ok = await window.store.signIn($authEmail.value.trim());
@@ -950,10 +961,9 @@
   });
 
   /* New pack form toggle */
-  document.getElementById('newPackBtn').addEventListener('click', () => {
-    const form = document.getElementById('newPackForm');
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
-    if (form.style.display === 'block') document.getElementById('newPackName').focus();
+  $newPackBtn.addEventListener('click', () => {
+    $newPackForm.style.display = $newPackForm.style.display === 'none' ? 'block' : 'none';
+    if ($newPackForm.style.display === 'block') $newPackName.focus();
   });
 
   $newPackForm.addEventListener('submit', async (e) => {
