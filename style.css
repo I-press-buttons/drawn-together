@@ -1253,6 +1253,8 @@
 .auth-sheet { max-width: min(90vw, 420px); }
 .auth-note { color: var(--ink-muted); font-size: 0.875rem; margin: 0.5rem 0 0.75rem; }
 .auth-note.hidden { display: none; }
+#authPasswordGroup.hidden { display: none; }
+#authModeToggle.hidden { display: none; }
 /* Sign-in gate replacing "+ New Pack" when signed out (web backend) */
 .pack-gate {
   display: flex;
