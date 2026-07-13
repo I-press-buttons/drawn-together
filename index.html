@@ -187,26 +187,54 @@
     </div>
   </div>
 
-  <!-- Sign-in (web version only) -->
+  <!-- Sign-in / sign-up (web version only) -->
   <div class="modal-overlay" id="authOverlay">
     <div class="modal-sheet auth-sheet">
       <div class="modal-handle" aria-hidden="true"></div>
       <div class="modal-header">
-        <h2 class="modal-title">Sign in</h2>
+        <h2 class="modal-title" id="authTitle">Sign in</h2>
         <button class="modal-close" id="authClose" aria-label="Close">&times;</button>
       </div>
-      <p class="auth-note">Enter your email and we'll send you a sign-in link —
-        new here, it creates your account. Or close this to play without saving
-        your progress.</p>
-      <form id="authForm" autocomplete="email">
+      <p class="auth-note" id="authNote">Sign in to save your progress. Or close
+        this to play without saving.</p>
+      <form id="authForm" autocomplete="on">
         <div class="form-group" style="margin-bottom:0.5rem">
-          <input class="form-input" id="authEmail" type="email" placeholder="you@example.com" required>
+          <input class="form-input" id="authEmail" type="email" placeholder="you@example.com" autocomplete="email" required>
+        </div>
+        <div class="form-group" style="margin-bottom:0.5rem">
+          <input class="form-input" id="authPassword" type="password" placeholder="Password" autocomplete="current-password" required minlength="6">
+        </div>
+        <div class="form-group hidden" id="authConfirmGroup" style="margin-bottom:0.5rem">
+          <input class="form-input" id="authConfirmPassword" type="password" placeholder="Confirm password" autocomplete="new-password" minlength="6">
         </div>
         <div id="authCaptcha" style="margin-bottom:0.5rem"></div>
         <p class="auth-note hidden" id="authCaptchaError">Verification didn't load — if you use an ad blocker or privacy extension, please disable it for this site and reload the page.</p>
-        <button class="btn-add" type="submit">Send magic link</button>
+        <button class="btn-add" type="submit" id="authSubmitBtn">Sign in</button>
       </form>
-      <p class="auth-note hidden" id="authSent">Check your email — the link signs you in here.</p>
+      <p class="auth-note" style="margin-top:0.5rem">
+        <a href="#" id="authModeToggle">Need an account? Sign up</a>
+        &nbsp;·&nbsp;
+        <a href="#" id="authForgotLink">Forgot password?</a>
+      </p>
+      <p class="auth-note hidden" id="authSent">Check your email — click the link to reset your password.</p>
+    </div>
+  </div>
+
+  <!-- Set new password (shown after clicking a password-reset email link) -->
+  <div class="modal-overlay" id="resetPasswordOverlay">
+    <div class="modal-sheet auth-sheet">
+      <div class="modal-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <h2 class="modal-title">Set new password</h2>
+      </div>
+      <p class="auth-note">Enter a new password for your account.</p>
+      <form id="resetPasswordForm" autocomplete="off">
+        <div class="form-group" style="margin-bottom:0.5rem">
+          <input class="form-input" id="resetPasswordInput" type="password" placeholder="New password" autocomplete="new-password" required minlength="6">
+        </div>
+        <button class="btn-add" type="submit">Set password</button>
+      </form>
+      <p class="auth-note hidden" id="resetPasswordError"></p>
     </div>
   </div>
 
