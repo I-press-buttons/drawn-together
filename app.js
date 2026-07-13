@@ -290,8 +290,8 @@
     let html = `
       <div class="pack-card">
         <div class="pack-header">
-          <span class="pack-toggle on" style="cursor:default;opacity:0.6">
-            <span class="pack-toggle-knob" style="background:var(--primary)"></span>
+          <span class="pack-toggle on pack-toggle-locked" title="Always on">
+            <span class="pack-toggle-knob"></span>
           </span>
           <span class="pack-name">Base Game</span>
           <span class="pack-base-tag">Built-in</span>
@@ -305,9 +305,11 @@
       const isOpen = String(openPackId) === String(pack.id);
       const rCount = pack.questions.length;
       html += `
-        <div class="pack-card">
+        <div class="pack-card ${pack.enabled ? '' : 'pack-card-off'}">
           <div class="pack-header" data-pack-id="${pack.id}">
-            <button class="pack-toggle ${pack.enabled ? 'on' : ''}" data-toggle="${pack.id}" aria-label="${pack.enabled ? 'Disable' : 'Enable'} pack"></button>
+            <button class="pack-toggle ${pack.enabled ? 'on' : ''}" data-toggle="${pack.id}" role="switch" aria-checked="${pack.enabled ? 'true' : 'false'}" aria-label="${escapeAttr(pack.name)}: ${pack.enabled ? 'on, tap to disable' : 'off, tap to enable'}">
+              <span class="pack-toggle-knob"></span>
+            </button>
             <span class="pack-name">${escapeHTML(pack.name)}</span>
             <span class="pack-count">${rCount} ${rCount === 1 ? 'question' : 'questions'}</span>
             <svg class="pack-chevron ${isOpen ? 'open' : ''}" data-chevron="${pack.id}" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
