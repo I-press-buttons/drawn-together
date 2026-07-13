@@ -28,6 +28,18 @@
   let questionsAnswered = 0;
   let rarestAnswered = null;
   let showAllAnswered = false;
+  let persistHintShown = false;
+
+  function maybeShowPersistHint() {
+    if (persistHintShown) return;
+    if (window.store.backend !== 'supabase') return;
+    if (window.store.signedIn()) return;
+    persistHintShown = true;
+    showToast('Playing without saving — sign in to keep your progress.', {
+      label: 'Sign in',
+      fn: () => $authOverlay.classList.add('open'),
+    });
+  }
 
   /* ── Theme ── */
   function getTheme() {
@@ -645,6 +657,7 @@
     showCard();
     updateUI();
     saveCurrentSession();
+    maybeShowPersistHint();
   }
 
   function renderCard() {
