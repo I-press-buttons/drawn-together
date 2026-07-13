@@ -113,10 +113,13 @@
     signedIn() { return !!session; },
     userEmail() { return session ? session.user.email : null; },
     onAuthChange(cb) { authCallbacks.push(cb); },
-    async signIn(email) {
+    async signIn(email, captchaToken) {
       const { error } = await client.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: window.location.origin + window.location.pathname },
+        options: {
+          emailRedirectTo: window.location.origin + window.location.pathname,
+          captchaToken,
+        },
       });
       return !error;
     },

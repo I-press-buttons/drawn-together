@@ -202,6 +202,8 @@
         <div class="form-group" style="margin-bottom:0.5rem">
           <input class="form-input" id="authEmail" type="email" placeholder="you@example.com" required>
         </div>
+        <div id="authCaptcha" style="margin-bottom:0.5rem"></div>
+        <p class="auth-note hidden" id="authCaptchaError">Verification didn't load — if you use an ad blocker or privacy extension, please disable it for this site and reload the page.</p>
         <button class="btn-add" type="submit">Send magic link</button>
       </form>
       <p class="auth-note hidden" id="authSent">Check your email — the link signs you in here.</p>
@@ -209,6 +211,7 @@
   </div>
 
 <script src="config.js" defer></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer onerror="window.__turnstileLoadFailed = true"></script>
 <script src="vendor/supabase.js" defer></script>
 <script src="store-server.js" defer></script>
 <script src="store-supabase.js" defer></script>

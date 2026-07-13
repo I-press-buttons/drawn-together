@@ -2,3 +2,4 @@
 window.DT_BACKEND = 'supabase';
 window.SUPABASE_URL = 'https://wajjncluitygfatocbba.supabase.co';
 window.SUPABASE_KEY = 'sb_publishable_PK351PhseJSGE7C9WMeF2w_szz10snZ';
+window.TURNSTILE_SITE_KEY = '0x4AAAAAAD1Kod8-cHzVbYIN';

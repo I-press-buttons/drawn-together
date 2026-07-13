@@ -570,6 +570,8 @@
   const $authForm      = document.getElementById('authForm');
   const $authEmail     = document.getElementById('authEmail');
   const $authSent      = document.getElementById('authSent');
+  const $authCaptcha   = document.getElementById('authCaptcha');
+  const $authCaptchaError = document.getElementById('authCaptchaError');
   const $accountControl = document.getElementById('accountControl');
   const $signInBtn     = document.getElementById('signInBtn');
   const $accountPill   = document.getElementById('accountPill');
@@ -577,6 +579,45 @@
   const $signOutBtn    = document.getElementById('signOutBtn');
 
   /* ── Auth (no-op for the server backend) ── */
+  let turnstileWidgetId = null;
+  let turnstileToken = null;
+  let turnstilePollTimer = null;
+  function ensureTurnstileWidget() {
+    if (!window.TURNSTILE_SITE_KEY || turnstileWidgetId !== null) return;
+    if (window.turnstile) {
+      clearInterval(turnstilePollTimer);
+      $authCaptchaError.classList.add('hidden');
+      turnstileWidgetId = window.turnstile.render($authCaptcha, {
+        sitekey: window.TURNSTILE_SITE_KEY,
+        callback: (token) => { turnstileToken = token; },
+        'expired-callback': () => { turnstileToken = null; },
+        'error-callback': () => { turnstileToken = null; },
+      });
+      return;
+    }
+    if (window.__turnstileLoadFailed) {
+      $authCaptchaError.classList.remove('hidden');
+      return;
+    }
+    if (turnstilePollTimer) return;
+    const deadline = Date.now() + 4000;
+    turnstilePollTimer = setInterval(() => {
+      if (window.turnstile) {
+        clearInterval(turnstilePollTimer);
+        turnstilePollTimer = null;
+        ensureTurnstileWidget();
+      } else if (window.__turnstileLoadFailed || Date.now() > deadline) {
+        clearInterval(turnstilePollTimer);
+        turnstilePollTimer = null;
+        $authCaptchaError.classList.remove('hidden');
+      }
+    }, 250);
+  }
+  function resetTurnstile() {
+    turnstileToken = null;
+    if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
+  }
+
   function requireSignIn() {
     if (window.store.signedIn()) return true;
     $authOverlay.classList.add('open');
@@ -948,11 +989,16 @@
 
   /* ── Auth Event Listeners ── */
   window.store.onAuthChange(updateAuthUI);
-  $signInBtn.addEventListener('click', () => $authOverlay.classList.add('open'));
-  $packGateSignInBtn.addEventListener('click', () => $authOverlay.classList.add('open'));
+  $signInBtn.addEventListener('click', () => { $authOverlay.classList.add('open'); ensureTurnstileWidget(); });
+  $packGateSignInBtn.addEventListener('click', () => { $authOverlay.classList.add('open'); ensureTurnstileWidget(); });
   $authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const ok = await window.store.signIn($authEmail.value.trim());
+    if (window.TURNSTILE_SITE_KEY && !turnstileToken) {
+      showToast("Please complete the verification and try again");
+      return;
+    }
+    const ok = await window.store.signIn($authEmail.value.trim(), turnstileToken);
+    resetTurnstile();
     $authSent.classList.toggle('hidden', !ok);
     if (!ok) showToast("Couldn't send the link — try again");
   });
