@@ -575,8 +575,7 @@
   const $authTitle     = document.getElementById('authTitle');
   const $authNote      = document.getElementById('authNote');
   const $authPassword  = document.getElementById('authPassword');
-  const $authConfirmGroup = document.getElementById('authConfirmGroup');
-  const $authConfirmPassword = document.getElementById('authConfirmPassword');
+  const $authPasswordGroup = document.getElementById('authPasswordGroup');
   const $authModeToggle = document.getElementById('authModeToggle');
   const $authSubmitBtn = document.getElementById('authSubmitBtn');
   const $authForgotLink = document.getElementById('authForgotLink');
@@ -1001,18 +1000,23 @@
   });
 
   /* ── Auth Event Listeners ── */
-  let authMode = 'signin'; // 'signin' | 'signup'
+  let authMode = 'signin'; // 'signin' | 'signup' | 'forgot'
   function setAuthMode(mode) {
     authMode = mode;
     const isSignUp = mode === 'signup';
-    $authTitle.textContent = isSignUp ? 'Sign up' : 'Sign in';
-    $authNote.textContent = isSignUp
+    const isForgot = mode === 'forgot';
+    $authTitle.textContent = isForgot ? 'Reset password' : isSignUp ? 'Sign up' : 'Sign in';
+    $authNote.textContent = isForgot
+      ? "Enter your email and we'll send you a password reset link."
+      : isSignUp
       ? 'Create an account to save your progress. Or close this to play without saving.'
       : 'Sign in to save your progress. Or close this to play without saving.';
-    $authConfirmGroup.classList.toggle('hidden', !isSignUp);
-    $authConfirmPassword.required = isSignUp;
-    $authSubmitBtn.textContent = isSignUp ? 'Sign up' : 'Sign in';
+    $authPasswordGroup.classList.toggle('hidden', isForgot);
+    $authPassword.required = !isForgot;
+    $authSubmitBtn.textContent = isForgot ? 'Send reset link' : isSignUp ? 'Sign up' : 'Sign in';
+    $authModeToggle.classList.toggle('hidden', isForgot);
     $authModeToggle.textContent = isSignUp ? 'Have an account? Sign in' : 'Need an account? Sign up';
+    $authForgotLink.textContent = isForgot ? 'Back to sign in' : 'Forgot password?';
     $authSent.classList.add('hidden');
   }
   window.store.onAuthChange(updateAuthUI);
@@ -1028,18 +1032,9 @@
     e.preventDefault();
     setAuthMode(authMode === 'signin' ? 'signup' : 'signin');
   });
-  $authForgotLink.addEventListener('click', async (e) => {
+  $authForgotLink.addEventListener('click', (e) => {
     e.preventDefault();
-    const email = $authEmail.value.trim();
-    if (!email) { showToast('Enter your email first'); return; }
-    if (window.TURNSTILE_SITE_KEY && !turnstileToken) {
-      showToast('Please complete the verification and try again');
-      return;
-    }
-    const err = await window.store.requestPasswordReset(email, turnstileToken);
-    resetTurnstile();
-    if (err) { showToast(err); return; }
-    $authSent.classList.remove('hidden');
+    setAuthMode(authMode === 'forgot' ? 'signin' : 'forgot');
   });
   $authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1048,11 +1043,14 @@
       return;
     }
     const email = $authEmail.value.trim();
-    const password = $authPassword.value;
-    if (authMode === 'signup' && password !== $authConfirmPassword.value) {
-      showToast("Passwords don't match");
+    if (authMode === 'forgot') {
+      const err = await window.store.requestPasswordReset(email, turnstileToken);
+      resetTurnstile();
+      if (err) { showToast(err); return; }
+      $authSent.classList.remove('hidden');
       return;
     }
+    const password = $authPassword.value;
     const err = authMode === 'signup'
       ? await window.store.signUp(email, password, turnstileToken)
       : await window.store.signIn(email, password, turnstileToken);
