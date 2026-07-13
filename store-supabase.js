@@ -13,9 +13,9 @@
     resolveReady();
     authCallbacks.forEach(cb => cb());
   });
-  client.auth.onAuthStateChange((_event, s) => {
+  client.auth.onAuthStateChange((event, s) => {
     session = s;
-    authCallbacks.forEach(cb => cb());
+    authCallbacks.forEach(cb => cb(event));
   });
 
   const EMPTY_MARKS = () => ({ favorites: [], retired: [] });
@@ -113,16 +113,34 @@
     signedIn() { return !!session; },
     userEmail() { return session ? session.user.email : null; },
     onAuthChange(cb) { authCallbacks.push(cb); },
-    async signIn(email, captchaToken) {
-      const { error } = await client.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: window.location.origin + window.location.pathname,
-          captchaToken,
-        },
+    async signIn(email, password, captchaToken) {
+      const { error } = await client.auth.signInWithPassword({
+        email, password,
+        options: { captchaToken },
       });
-      if (error) console.error('[signIn] signInWithOtp error:', error.status, error.message, error);
-      return !error;
+      if (error) console.error('[signIn] signInWithPassword error:', error.status, error.message);
+      return error ? error.message : null;
+    },
+    async signUp(email, password, captchaToken) {
+      const { error } = await client.auth.signUp({
+        email, password,
+        options: { captchaToken },
+      });
+      if (error) console.error('[signUp] signUp error:', error.status, error.message);
+      return error ? error.message : null;
+    },
+    async requestPasswordReset(email, captchaToken) {
+      const { error } = await client.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname,
+        captchaToken,
+      });
+      if (error) console.error('[requestPasswordReset] error:', error.status, error.message);
+      return error ? error.message : null;
+    },
+    async updatePassword(newPassword) {
+      const { error } = await client.auth.updateUser({ password: newPassword });
+      if (error) console.error('[updatePassword] error:', error.status, error.message);
+      return error ? error.message : null;
     },
     async signOut() { await client.auth.signOut(); },
   };
