@@ -586,10 +586,13 @@
     const email = window.store.userEmail();
     const signedIn = window.store.signedIn();
     /* local/Docker backend: signedIn() is always true with no email — no real auth, so hide the control entirely */
+    const wasFocusInPill = $accountPill.contains(document.activeElement);
     $accountControl.classList.toggle('hidden', signedIn && !email);
     $signInBtn.classList.toggle('hidden', signedIn);
     $accountPill.classList.toggle('hidden', !signedIn);
+    if (wasFocusInPill && !signedIn) $signInBtn.focus();
     if (email) $accountEmail.textContent = email;
+    else $accountEmail.textContent = '';
     /* re-pull user data whenever auth flips, then offer to resume that user's session */
     Promise.all([loadPacks(), loadMarks()]).then(() => {
       renderPacks();
@@ -852,6 +855,8 @@
     if (existing) existing.remove();
     const el = document.createElement('div');
     el.className = 'toast';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
     el.textContent = msg;
     if (action) {
       const btn = document.createElement('button');
@@ -1029,6 +1034,9 @@
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && $modalOverlay.classList.contains('open')) {
       closeModal();
+    }
+    if (e.key === 'Escape' && $authOverlay.classList.contains('open')) {
+      $authOverlay.classList.remove('open');
     }
   });
 

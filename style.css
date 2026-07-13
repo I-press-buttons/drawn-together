@@ -1264,7 +1264,7 @@
 .account-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account-signout {
   display: flex; align-items: center; justify-content: center;
-  width: 1.25rem; height: 1.25rem; flex-shrink: 0;
+  width: 1.5rem; height: 1.5rem; flex-shrink: 0;
   border: none; border-radius: 50%; background: transparent;
   color: var(--ink-muted); font-size: 1rem; line-height: 1; cursor: pointer;
 }
