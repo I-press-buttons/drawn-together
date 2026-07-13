@@ -28,18 +28,6 @@
   let questionsAnswered = 0;
   let rarestAnswered = null;
   let showAllAnswered = false;
-  let persistHintShown = false;
-
-  function maybeShowPersistHint() {
-    if (persistHintShown) return;
-    if (window.store.backend !== 'supabase') return;
-    if (window.store.signedIn()) return;
-    persistHintShown = true;
-    showToast('Playing without saving — sign in to keep your progress.', {
-      label: 'Sign in',
-      fn: () => $authOverlay.classList.add('open'),
-    });
-  }
 
   /* ── Theme ── */
   function getTheme() {
@@ -585,6 +573,7 @@
   function updateAuthUI() {
     const email = window.store.userEmail();
     const signedIn = window.store.signedIn();
+    if (signedIn) $authOverlay.classList.remove('open');
     /* local/Docker backend: signedIn() is always true with no email — no real auth, so hide the control entirely */
     const wasFocusInPill = $accountPill.contains(document.activeElement);
     $accountControl.classList.toggle('hidden', signedIn && !email);
@@ -660,7 +649,6 @@
     showCard();
     updateUI();
     saveCurrentSession();
-    maybeShowPersistHint();
   }
 
   function renderCard() {
@@ -1092,6 +1080,10 @@
   (async () => {
     await loadQuestions();
     await window.store.ready();
+    /* Sign-in is the first thing a signed-out web user sees (dismissible — anonymous play still works) */
+    if (window.store.backend === 'supabase' && !window.store.signedIn()) {
+      $authOverlay.classList.add('open');
+    }
     await Promise.all([loadPacks(), loadMarks()]);
     await tryResumeOrStart();
     toggleScore(true);
