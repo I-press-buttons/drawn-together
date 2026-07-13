@@ -583,19 +583,22 @@
   let turnstileToken = null;
   let turnstilePollTimer = null;
   function ensureTurnstileWidget() {
+    console.debug('[turnstile] ensureTurnstileWidget called', { siteKey: window.TURNSTILE_SITE_KEY, widgetId: turnstileWidgetId, hasTurnstile: !!window.turnstile, loadFailed: !!window.__turnstileLoadFailed });
     if (!window.TURNSTILE_SITE_KEY || turnstileWidgetId !== null) return;
     if (window.turnstile) {
       clearInterval(turnstilePollTimer);
       $authCaptchaError.classList.add('hidden');
       turnstileWidgetId = window.turnstile.render($authCaptcha, {
         sitekey: window.TURNSTILE_SITE_KEY,
-        callback: (token) => { turnstileToken = token; },
-        'expired-callback': () => { turnstileToken = null; },
-        'error-callback': () => { turnstileToken = null; },
+        callback: (token) => { console.debug('[turnstile] token received', token && token.slice(0, 12) + '…'); turnstileToken = token; },
+        'expired-callback': () => { console.debug('[turnstile] token expired'); turnstileToken = null; },
+        'error-callback': (code) => { console.debug('[turnstile] error-callback', code); turnstileToken = null; },
       });
+      console.debug('[turnstile] widget rendered', turnstileWidgetId);
       return;
     }
     if (window.__turnstileLoadFailed) {
+      console.debug('[turnstile] script failed to load (onerror fired)');
       $authCaptchaError.classList.remove('hidden');
       return;
     }
@@ -607,6 +610,7 @@
         turnstilePollTimer = null;
         ensureTurnstileWidget();
       } else if (window.__turnstileLoadFailed || Date.now() > deadline) {
+        console.debug('[turnstile] gave up waiting for script', { loadFailed: !!window.__turnstileLoadFailed, timedOut: Date.now() > deadline });
         clearInterval(turnstilePollTimer);
         turnstilePollTimer = null;
         $authCaptchaError.classList.remove('hidden');
@@ -993,6 +997,7 @@
   $packGateSignInBtn.addEventListener('click', () => { $authOverlay.classList.add('open'); ensureTurnstileWidget(); });
   $authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    console.debug('[turnstile] submit', { hasToken: !!turnstileToken });
     if (window.TURNSTILE_SITE_KEY && !turnstileToken) {
       showToast("Please complete the verification and try again");
       return;

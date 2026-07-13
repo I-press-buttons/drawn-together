@@ -121,6 +121,7 @@
           captchaToken,
         },
       });
+      if (error) console.error('[signIn] signInWithOtp error:', error.status, error.message, error);
       return !error;
     },
     async signOut() { await client.auth.signOut(); },
