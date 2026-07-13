@@ -583,7 +583,7 @@
     return false;
   }
 
-  function updateAuthUI() {
+  function syncAccountUI() {
     const email = window.store.userEmail();
     const signedIn = window.store.signedIn();
     if (signedIn) $authOverlay.classList.remove('open');
@@ -595,6 +595,10 @@
     if (wasFocusInPill && !signedIn) $signInBtn.focus();
     if (email) $accountEmail.textContent = email;
     else $accountEmail.textContent = '';
+  }
+
+  function updateAuthUI() {
+    syncAccountUI();
     /* re-pull user data whenever auth flips, then offer to resume that user's session */
     Promise.all([loadPacks(), loadMarks()]).then(() => {
       renderPacks();
@@ -1094,6 +1098,12 @@
     if (window.store.backend === 'supabase' && !window.store.signedIn()) {
       $authOverlay.classList.add('open');
     }
+    /* onAuthChange(updateAuthUI) can register too late to catch the initial
+       SIGNED_IN/INITIAL_SESSION broadcast (deferred scripts run in order, each
+       draining its own microtasks before the next starts) — sync the account
+       control's visible state directly here so an already-signed-in reload
+       doesn't leave it stuck in its default hidden markup. */
+    syncAccountUI();
     await Promise.all([loadPacks(), loadMarks()]);
     await tryResumeOrStart();
     toggleScore(true);
