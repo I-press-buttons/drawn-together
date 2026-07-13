@@ -625,6 +625,7 @@
   function requireSignIn() {
     if (window.store.signedIn()) return true;
     $authOverlay.classList.add('open');
+    ensureTurnstileWidget();
     return false;
   }
 
@@ -1148,6 +1149,7 @@
     /* Sign-in is the first thing a signed-out web user sees (dismissible — anonymous play still works) */
     if (window.store.backend === 'supabase' && !window.store.signedIn()) {
       $authOverlay.classList.add('open');
+      ensureTurnstileWidget();
     }
     /* onAuthChange(updateAuthUI) can register too late to catch the initial
        SIGNED_IN/INITIAL_SESSION broadcast (deferred scripts run in order, each
