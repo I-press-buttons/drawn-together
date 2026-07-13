@@ -572,6 +572,18 @@
   const $authSent      = document.getElementById('authSent');
   const $authCaptcha   = document.getElementById('authCaptcha');
   const $authCaptchaError = document.getElementById('authCaptchaError');
+  const $authTitle     = document.getElementById('authTitle');
+  const $authNote      = document.getElementById('authNote');
+  const $authPassword  = document.getElementById('authPassword');
+  const $authConfirmGroup = document.getElementById('authConfirmGroup');
+  const $authConfirmPassword = document.getElementById('authConfirmPassword');
+  const $authModeToggle = document.getElementById('authModeToggle');
+  const $authSubmitBtn = document.getElementById('authSubmitBtn');
+  const $authForgotLink = document.getElementById('authForgotLink');
+  const $resetPasswordOverlay = document.getElementById('resetPasswordOverlay');
+  const $resetPasswordForm = document.getElementById('resetPasswordForm');
+  const $resetPasswordInput = document.getElementById('resetPasswordInput');
+  const $resetPasswordError = document.getElementById('resetPasswordError');
   const $accountControl = document.getElementById('accountControl');
   const $signInBtn     = document.getElementById('signInBtn');
   const $accountPill   = document.getElementById('accountPill');
@@ -583,22 +595,19 @@
   let turnstileToken = null;
   let turnstilePollTimer = null;
   function ensureTurnstileWidget() {
-    console.debug('[turnstile] ensureTurnstileWidget called', { siteKey: window.TURNSTILE_SITE_KEY, widgetId: turnstileWidgetId, hasTurnstile: !!window.turnstile, loadFailed: !!window.__turnstileLoadFailed });
     if (!window.TURNSTILE_SITE_KEY || turnstileWidgetId !== null) return;
     if (window.turnstile) {
       clearInterval(turnstilePollTimer);
       $authCaptchaError.classList.add('hidden');
       turnstileWidgetId = window.turnstile.render($authCaptcha, {
         sitekey: window.TURNSTILE_SITE_KEY,
-        callback: (token) => { console.debug('[turnstile] token received', token && token.slice(0, 12) + '…'); turnstileToken = token; },
-        'expired-callback': () => { console.debug('[turnstile] token expired'); turnstileToken = null; },
-        'error-callback': (code) => { console.debug('[turnstile] error-callback', code); turnstileToken = null; },
+        callback: (token) => { turnstileToken = token; },
+        'expired-callback': () => { turnstileToken = null; },
+        'error-callback': () => { turnstileToken = null; },
       });
-      console.debug('[turnstile] widget rendered', turnstileWidgetId);
       return;
     }
     if (window.__turnstileLoadFailed) {
-      console.debug('[turnstile] script failed to load (onerror fired)');
       $authCaptchaError.classList.remove('hidden');
       return;
     }
@@ -610,7 +619,6 @@
         turnstilePollTimer = null;
         ensureTurnstileWidget();
       } else if (window.__turnstileLoadFailed || Date.now() > deadline) {
-        console.debug('[turnstile] gave up waiting for script', { loadFailed: !!window.__turnstileLoadFailed, timedOut: Date.now() > deadline });
         clearInterval(turnstilePollTimer);
         turnstilePollTimer = null;
         $authCaptchaError.classList.remove('hidden');
@@ -993,24 +1001,79 @@
   });
 
   /* ── Auth Event Listeners ── */
+  let authMode = 'signin'; // 'signin' | 'signup'
+  function setAuthMode(mode) {
+    authMode = mode;
+    const isSignUp = mode === 'signup';
+    $authTitle.textContent = isSignUp ? 'Sign up' : 'Sign in';
+    $authNote.textContent = isSignUp
+      ? 'Create an account to save your progress. Or close this to play without saving.'
+      : 'Sign in to save your progress. Or close this to play without saving.';
+    $authConfirmGroup.classList.toggle('hidden', !isSignUp);
+    $authConfirmPassword.required = isSignUp;
+    $authSubmitBtn.textContent = isSignUp ? 'Sign up' : 'Sign in';
+    $authModeToggle.textContent = isSignUp ? 'Have an account? Sign in' : 'Need an account? Sign up';
+    $authSent.classList.add('hidden');
+  }
   window.store.onAuthChange(updateAuthUI);
-  $signInBtn.addEventListener('click', () => { $authOverlay.classList.add('open'); ensureTurnstileWidget(); });
-  $packGateSignInBtn.addEventListener('click', () => { $authOverlay.classList.add('open'); ensureTurnstileWidget(); });
+  window.store.onAuthChange((event) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      $authOverlay.classList.remove('open');
+      $resetPasswordOverlay.classList.add('open');
+    }
+  });
+  $signInBtn.addEventListener('click', () => { setAuthMode('signin'); $authOverlay.classList.add('open'); ensureTurnstileWidget(); });
+  $packGateSignInBtn.addEventListener('click', () => { setAuthMode('signin'); $authOverlay.classList.add('open'); ensureTurnstileWidget(); });
+  $authModeToggle.addEventListener('click', (e) => {
+    e.preventDefault();
+    setAuthMode(authMode === 'signin' ? 'signup' : 'signin');
+  });
+  $authForgotLink.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = $authEmail.value.trim();
+    if (!email) { showToast('Enter your email first'); return; }
+    if (window.TURNSTILE_SITE_KEY && !turnstileToken) {
+      showToast('Please complete the verification and try again');
+      return;
+    }
+    const err = await window.store.requestPasswordReset(email, turnstileToken);
+    resetTurnstile();
+    if (err) { showToast(err); return; }
+    $authSent.classList.remove('hidden');
+  });
   $authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    console.debug('[turnstile] submit', { hasToken: !!turnstileToken });
     if (window.TURNSTILE_SITE_KEY && !turnstileToken) {
       showToast("Please complete the verification and try again");
       return;
     }
-    const ok = await window.store.signIn($authEmail.value.trim(), turnstileToken);
+    const email = $authEmail.value.trim();
+    const password = $authPassword.value;
+    if (authMode === 'signup' && password !== $authConfirmPassword.value) {
+      showToast("Passwords don't match");
+      return;
+    }
+    const err = authMode === 'signup'
+      ? await window.store.signUp(email, password, turnstileToken)
+      : await window.store.signIn(email, password, turnstileToken);
     resetTurnstile();
-    $authSent.classList.toggle('hidden', !ok);
-    if (!ok) showToast("Couldn't send the link — try again");
+    if (err) { showToast(err); return; }
+    $authOverlay.classList.remove('open');
   });
   $authClose.addEventListener('click', () => $authOverlay.classList.remove('open'));
   $authOverlay.addEventListener('click', (e) => {
     if (e.target === $authOverlay) $authOverlay.classList.remove('open');
+  });
+  $resetPasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const err = await window.store.updatePassword($resetPasswordInput.value);
+    if (err) {
+      $resetPasswordError.textContent = err;
+      $resetPasswordError.classList.remove('hidden');
+      return;
+    }
+    $resetPasswordOverlay.classList.remove('open');
+    showToast('Password updated');
   });
   $signOutBtn.addEventListener('click', async () => {
     await window.store.signOut();
