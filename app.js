@@ -582,6 +582,7 @@
   const $resetPasswordOverlay = document.getElementById('resetPasswordOverlay');
   const $resetPasswordForm = document.getElementById('resetPasswordForm');
   const $resetPasswordInput = document.getElementById('resetPasswordInput');
+  const $resetPasswordConfirm = document.getElementById('resetPasswordConfirm');
   const $resetPasswordError = document.getElementById('resetPasswordError');
   const $accountControl = document.getElementById('accountControl');
   const $signInBtn     = document.getElementById('signInBtn');
@@ -1064,6 +1065,11 @@
   });
   $resetPasswordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if ($resetPasswordInput.value !== $resetPasswordConfirm.value) {
+      $resetPasswordError.textContent = "Passwords don't match";
+      $resetPasswordError.classList.remove('hidden');
+      return;
+    }
     const err = await window.store.updatePassword($resetPasswordInput.value);
     if (err) {
       $resetPasswordError.textContent = err;
