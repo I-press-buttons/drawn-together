@@ -5,9 +5,12 @@
   const client = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_KEY);
   let session = null;
   const authCallbacks = [];
+  let resolveReady;
+  const readyPromise = new Promise(r => { resolveReady = r; });
 
   client.auth.getSession().then(({ data }) => {
     session = data.session;
+    resolveReady();
     authCallbacks.forEach(cb => cb());
   });
   client.auth.onAuthStateChange((_event, s) => {
@@ -106,6 +109,7 @@
       return !error;
     },
 
+    ready() { return readyPromise; },
     signedIn() { return !!session; },
     userEmail() { return session ? session.user.email : null; },
     onAuthChange(cb) { authCallbacks.push(cb); },

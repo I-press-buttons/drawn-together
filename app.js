@@ -1063,6 +1063,7 @@
   loadTheme();
   (async () => {
     await loadQuestions();
+    await window.store.ready();
     await Promise.all([loadPacks(), loadMarks()]);
     await tryResumeOrStart();
     toggleScore(true);

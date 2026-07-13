@@ -77,6 +77,7 @@
     },
 
     /* Auth is a no-op on the local server. */
+    ready() { return Promise.resolve(); },
     signedIn() { return true; },
     userEmail() { return null; },
     onAuthChange(cb) {},
