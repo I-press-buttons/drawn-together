@@ -576,6 +576,9 @@
   const $authNote      = document.getElementById('authNote');
   const $authPassword  = document.getElementById('authPassword');
   const $authPasswordGroup = document.getElementById('authPasswordGroup');
+  const $authConfirmGroup = document.getElementById('authConfirmGroup');
+  const $authConfirmPassword = document.getElementById('authConfirmPassword');
+  const $authPasswordHint = document.getElementById('authPasswordHint');
   const $authModeToggle = document.getElementById('authModeToggle');
   const $authSubmitBtn = document.getElementById('authSubmitBtn');
   const $authForgotLink = document.getElementById('authForgotLink');
@@ -1002,6 +1005,8 @@
 
   /* ── Auth Event Listeners ── */
   let authMode = 'signin'; // 'signin' | 'signup' | 'forgot'
+  const PASSWORD_RULE = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+  const PASSWORD_RULE_MSG = 'Password must be at least 8 characters and include a letter and a number';
   function setAuthMode(mode) {
     authMode = mode;
     const isSignUp = mode === 'signup';
@@ -1014,6 +1019,9 @@
       : 'Sign in to save your progress. Or close this to play without saving.';
     $authPasswordGroup.classList.toggle('hidden', isForgot);
     $authPassword.required = !isForgot;
+    $authConfirmGroup.classList.toggle('hidden', !isSignUp);
+    $authConfirmPassword.required = isSignUp;
+    $authPasswordHint.classList.toggle('hidden', !isSignUp);
     $authSubmitBtn.textContent = isForgot ? 'Send reset link' : isSignUp ? 'Sign up' : 'Sign in';
     $authModeToggle.classList.toggle('hidden', isForgot);
     $authModeToggle.textContent = isSignUp ? 'Have an account? Sign in' : 'Need an account? Sign up';
@@ -1052,6 +1060,10 @@
       return;
     }
     const password = $authPassword.value;
+    if (authMode === 'signup') {
+      if (!PASSWORD_RULE.test(password)) { showToast(PASSWORD_RULE_MSG); return; }
+      if (password !== $authConfirmPassword.value) { showToast("Passwords don't match"); return; }
+    }
     const err = authMode === 'signup'
       ? await window.store.signUp(email, password, turnstileToken)
       : await window.store.signIn(email, password, turnstileToken);
@@ -1065,6 +1077,11 @@
   });
   $resetPasswordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!PASSWORD_RULE.test($resetPasswordInput.value)) {
+      $resetPasswordError.textContent = PASSWORD_RULE_MSG;
+      $resetPasswordError.classList.remove('hidden');
+      return;
+    }
     if ($resetPasswordInput.value !== $resetPasswordConfirm.value) {
       $resetPasswordError.textContent = "Passwords don't match";
       $resetPasswordError.classList.remove('hidden');
