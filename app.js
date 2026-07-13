@@ -552,14 +552,16 @@
   const $newPackForm = document.getElementById('newPackForm');
   const $newPackName = document.getElementById('newPackName');
   const $mainArea     = document.getElementById('mainArea');
-  const $authOverlay  = document.getElementById('authOverlay');
-  const $authClose    = document.getElementById('authClose');
-  const $authForm     = document.getElementById('authForm');
-  const $authEmail    = document.getElementById('authEmail');
-  const $authSent     = document.getElementById('authSent');
-  const $accountRow   = document.getElementById('accountRow');
-  const $accountEmail = document.getElementById('accountEmail');
-  const $signOutBtn   = document.getElementById('signOutBtn');
+  const $authOverlay   = document.getElementById('authOverlay');
+  const $authClose     = document.getElementById('authClose');
+  const $authForm      = document.getElementById('authForm');
+  const $authEmail     = document.getElementById('authEmail');
+  const $authSent      = document.getElementById('authSent');
+  const $accountControl = document.getElementById('accountControl');
+  const $signInBtn     = document.getElementById('signInBtn');
+  const $accountPill   = document.getElementById('accountPill');
+  const $accountEmail  = document.getElementById('accountEmail');
+  const $signOutBtn    = document.getElementById('signOutBtn');
 
   /* ── Auth (no-op for the server backend) ── */
   function requireSignIn() {
@@ -570,7 +572,11 @@
 
   function updateAuthUI() {
     const email = window.store.userEmail();
-    $accountRow.classList.toggle('hidden', !email);
+    const signedIn = window.store.signedIn();
+    /* local/Docker backend: signedIn() is always true with no email — no real auth, so hide the control entirely */
+    $accountControl.classList.toggle('hidden', signedIn && !email);
+    $signInBtn.classList.toggle('hidden', signedIn);
+    $accountPill.classList.toggle('hidden', !signedIn);
     if (email) $accountEmail.textContent = email;
     /* re-pull user data whenever auth flips, then offer to resume that user's session */
     Promise.all([loadPacks(), loadMarks()]).then(() => {
@@ -922,6 +928,7 @@
 
   /* ── Auth Event Listeners ── */
   window.store.onAuthChange(updateAuthUI);
+  $signInBtn.addEventListener('click', () => $authOverlay.classList.add('open'));
   $authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const ok = await window.store.signIn($authEmail.value.trim());

@@ -22,6 +22,11 @@ await page.goto(BASE, { waitUntil: 'networkidle' });
 const count = await page.textContent('#remainingCount');
 if (count !== '108') fail(`deck count ${count} != 108`);
 
+// 1b. Account control hidden on server backend (no real auth)
+const hidden = await page.evaluate(() =>
+  document.getElementById('accountControl').classList.contains('hidden'));
+if (!hidden) fail('accountControl should be hidden on server backend');
+
 // 2. Draw a card, heart it, answer it
 await page.click('#drawBtn');
 await page.waitForSelector('#cardStage:not(.hidden)');

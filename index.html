@@ -28,6 +28,13 @@
 
       <!-- Top Bar -->
       <header class="top-bar">
+        <div class="account-control hidden" id="accountControl">
+          <button class="btn btn-ghost btn-small" id="signInBtn">Sign in</button>
+          <span class="account-pill hidden" id="accountPill">
+            <span class="account-email" id="accountEmail"></span>
+            <button class="account-signout" id="signOutBtn" aria-label="Sign out" title="Sign out">&times;</button>
+          </span>
+        </div>
         <h1 class="title">Drawn Together</h1>
         <div class="top-actions">
           <div class="stat" id="scoreDisplay">
@@ -147,11 +154,6 @@
       <div class="modal-header">
         <h2 class="modal-title">Question Packs</h2>
         <button class="modal-close" id="modalClose" aria-label="Close">&times;</button>
-      </div>
-
-      <div class="account-row hidden" id="accountRow">
-        <span class="account-email" id="accountEmail"></span>
-        <button class="btn btn-ghost btn-small" id="signOutBtn">Sign out</button>
       </div>
 
       <!-- Pack list -->
