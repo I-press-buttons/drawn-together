@@ -424,7 +424,10 @@
         const id = btn.dataset.toggle;
         const pack = questionPacks.find(p => String(p.id) === id);
         if (!pack) return;
-        await togglePack(id, !pack.enabled);
+        if (await togglePack(id, !pack.enabled)) {
+          const updated = questionPacks.find(p => String(p.id) === id);
+          if (updated) syncDeckWithPack(updated);
+        }
         renderPacks();
       });
     });
@@ -673,6 +676,35 @@
       [a[i], a[j]] = [a[j], a[i]];
     }
     return a;
+  }
+
+  /* Reconcile the live deck after a pack toggle: shuffle the pack's cards in
+     when it's enabled, pull them out when it's disabled. Cards already drawn
+     (currentCard) or answered (discard) stay put. */
+  function syncDeckWithPack(pack) {
+    const prefix = `p${pack.id}-`;
+    if (pack.enabled) {
+      const inPlay = new Set([...deck, ...discard].map(q => q.qkey));
+      if (currentCard) inPlay.add(currentCard.qkey);
+      const additions = pack.questions
+        .map(q => ({
+          text: q.text,
+          rarity: q.rarity,
+          category: q.category || 'Custom',
+          pack: pack.name,
+          qkey: `${prefix}${q.id}`,
+        }))
+        .filter(q => !inPlay.has(q.qkey) && !isRetired(q.qkey));
+      if (additions.length > 0) deck = shuffle([...deck, ...additions]);
+    } else {
+      deck = deck.filter(q => !q.qkey.startsWith(prefix));
+    }
+    updateUI();
+    if (!currentCard && deck.length > 0 && !$gameOver.classList.contains('hidden')) {
+      $gameOver.classList.add('hidden');
+      showEmptyState();
+    }
+    saveCurrentSession();
   }
 
   function resetGame(customDeck) {
