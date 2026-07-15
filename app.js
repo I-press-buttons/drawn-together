@@ -19,6 +19,42 @@
     } catch (e) { /* fetch failed — deck stays empty, packs may still load */ }
   }
 
+  /* ── Featured packs (shipped, read-only content) ── */
+  const FEATURED_PACKS = [];
+  let featuredPrefs = {};   /* { [key]: boolean } — only overrides; missing key = enabled */
+
+  async function loadFeaturedPacks() {
+    try {
+      const res = await fetch('featured_packs.json');
+      if (res.ok) FEATURED_PACKS.push(...await res.json());
+    } catch (e) { /* fetch failed — featured section stays empty */ }
+  }
+
+  async function loadFeaturedPrefs() {
+    featuredPrefs = await window.store.loadFeaturedPackPrefs();
+  }
+
+  function isFeaturedPackEnabled(key) { return featuredPrefs[key] !== false; }
+
+  function featuredCards(fp) {
+    return fp.questions.map(q => ({
+      text: q.text,
+      rarity: q.rarity,
+      category: q.category || 'Custom',
+      pack: fp.name,
+      qkey: `f${fp.key}-${q.id}`,
+    }));
+  }
+
+  /* Optimistic-ish toggle: persist via the store, adopt the returned map. */
+  async function toggleFeaturedPack(key, enabled) {
+    const updated = await window.store.setFeaturedPackPref(key, enabled);
+    if (updated) { featuredPrefs = updated; return true; }
+    await loadFeaturedPrefs();
+    showToast("Couldn't save that — check the connection");
+    return false;
+  }
+
   /* ── Game State ── */
   let deck = [];
   let discard = [];
@@ -107,6 +143,13 @@
   function findQuestionByKey(qkey) {
     const base = QUESTIONS.find(q => q.qkey === qkey);
     if (base) return base;
+    for (const fp of FEATURED_PACKS) {
+      for (const q of fp.questions) {
+        if (`f${fp.key}-${q.id}` === qkey) {
+          return { text: q.text, rarity: q.rarity, category: q.category || 'Custom', qkey };
+        }
+      }
+    }
     for (const pack of questionPacks) {
       for (const q of pack.questions) {
         if (`p${pack.id}-${q.id}` === qkey) {
@@ -178,6 +221,10 @@
 
   function getAllQuestions() {
     let extra = [];
+    for (const fp of FEATURED_PACKS) {
+      if (!isFeaturedPackEnabled(fp.key)) continue;
+      extra.push(...featuredCards(fp));
+    }
     for (const pack of questionPacks) {
       if (!pack.enabled) continue;
       for (const q of pack.questions) {
@@ -884,7 +931,7 @@
   function updateAuthUI() {
     syncAccountUI();
     /* re-pull user data whenever auth flips, then offer to resume that user's session */
-    Promise.all([loadPacks(), loadMarks()]).then(() => {
+    Promise.all([loadPacks(), loadMarks(), loadFeaturedPrefs()]).then(() => {
       renderPacks();
       tryResumeOrStart();
     });
@@ -903,20 +950,11 @@
   /* Reconcile the live deck after a pack toggle: shuffle the pack's cards in
      when it's enabled, pull them out when it's disabled. Cards already drawn
      (currentCard) or answered (discard) stay put. */
-  function syncDeckWithPack(pack) {
-    const prefix = `p${pack.id}-`;
-    if (pack.enabled) {
+  function syncDeckWithCards(prefix, cards, enabled) {
+    if (enabled) {
       const inPlay = new Set([...deck, ...discard, ...skipped].map(q => q.qkey));
       if (currentCard) inPlay.add(currentCard.qkey);
-      const additions = pack.questions
-        .map(q => ({
-          text: q.text,
-          rarity: q.rarity,
-          category: q.category || 'Custom',
-          pack: pack.name,
-          qkey: `${prefix}${q.id}`,
-        }))
-        .filter(q => !inPlay.has(q.qkey) && !isRetired(q.qkey));
+      const additions = cards.filter(q => !inPlay.has(q.qkey) && !isRetired(q.qkey));
       if (additions.length > 0) deck = shuffle([...deck, ...additions]);
     } else {
       deck = deck.filter(q => !q.qkey.startsWith(prefix));
@@ -928,6 +966,18 @@
       showEmptyState();
     }
     saveCurrentSession();
+  }
+
+  function syncDeckWithPack(pack) {
+    const prefix = `p${pack.id}-`;
+    const cards = pack.questions.map(q => ({
+      text: q.text,
+      rarity: q.rarity,
+      category: q.category || 'Custom',
+      pack: pack.name,
+      qkey: `${prefix}${q.id}`,
+    }));
+    syncDeckWithCards(prefix, cards, pack.enabled);
   }
 
   /* Remove a deleted pack's cards from every live pile. The current card is
@@ -1720,7 +1770,7 @@
   loadTheme();
   loadSidebarCollapsed();
   (async () => {
-    await loadQuestions();
+    await Promise.all([loadQuestions(), loadFeaturedPacks()]);
     await window.store.ready();
     /* Sign-in is the first thing a signed-out web user sees (dismissible — anonymous play still works) */
     if (window.store.backend === 'supabase' && !window.store.signedIn()) {
@@ -1733,7 +1783,7 @@
        control's visible state directly here so an already-signed-in reload
        doesn't leave it stuck in its default hidden markup. */
     syncAccountUI();
-    await Promise.all([loadPacks(), loadMarks()]);
+    await Promise.all([loadPacks(), loadMarks(), loadFeaturedPrefs()]);
     await tryResumeOrStart();
     toggleScore(true);
     updateDeckCount();
