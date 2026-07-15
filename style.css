@@ -1251,6 +1251,45 @@
   }
   .pack-del-confirm-btn:hover { background: oklch(0.5 0.18 25); }
 
+  .pack-q-check {
+    flex-shrink: 0;
+    width: 0.9375rem;
+    height: 0.9375rem;
+    margin: 0;
+    accent-color: var(--primary);
+    cursor: pointer;
+  }
+
+  .pack-move-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.625rem;
+    border-radius: var(--radius-sm);
+    background: var(--bg);
+    font-size: 0.8125rem;
+  }
+  .pack-move-count {
+    font-weight: 600;
+    color: var(--ink-dim);
+    flex-shrink: 0;
+  }
+  .pack-move-select {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--card-border);
+    background: var(--surface-raised);
+    color: var(--ink-dim);
+  }
+  .pack-move-hint {
+    color: var(--ink-muted);
+    font-size: 0.75rem;
+  }
+
   .pack-q-empty {
     font-size: 0.75rem;
     color: var(--ink-muted);

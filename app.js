@@ -285,6 +285,7 @@
   let openPackId = null;
   let editingQ = null;   /* "packId::qid" while a question row is in edit mode */
   let deletingPackId = null;   /* pack id with the delete-confirm strip showing */
+  let selectedQs = new Set();  /* "packId::qid" keys checked for moving */
 
   function openModal() {
     renderPacks();
@@ -294,6 +295,8 @@
   function closeModal() {
     document.getElementById('modalOverlay').classList.remove('open');
     openPackId = null;
+    deletingPackId = null;
+    selectedQs.clear();
   }
 
   /* Signed out on the web backend: replace "+ New Pack" with a sign-in prompt.
@@ -327,6 +330,8 @@
     for (const pack of questionPacks) {
       const isOpen = String(openPackId) === String(pack.id);
       const rCount = pack.questions.length;
+      const selCount = [...selectedQs].filter(k => k.startsWith(`${pack.id}::`)).length;
+      const otherPacks = questionPacks.filter(p => String(p.id) !== String(pack.id));
       html += `
         <div class="pack-card ${pack.enabled ? '' : 'pack-card-off'}">
           <div class="pack-header" data-pack-id="${pack.id}">
@@ -348,6 +353,14 @@
                 <button class="btn-restore" type="button" data-cancel-del>Cancel</button>
               </div>
             </div>` : ''}
+            ${selCount > 0 ? `<div class="pack-move-bar">
+              <span class="pack-move-count">Move ${selCount}</span>
+              ${otherPacks.length > 0 ? `<select class="pack-move-select" data-move-select="${pack.id}" aria-label="Destination pack">
+                ${otherPacks.map(p => `<option value="${p.id}">${escapeHTML(p.name)}</option>`).join('')}
+              </select>
+              <button class="pack-add-btn" type="button" data-move-btn="${pack.id}">Move</button>`
+              : '<span class="pack-move-hint">Create another pack to move questions</span>'}
+            </div>` : ''}
             <div class="pack-questions">
               ${rCount === 0 ? '<p class="pack-q-empty">No questions yet</p>' : ''}
               ${pack.questions.map(q => {
@@ -368,6 +381,7 @@
                   </form>`;
                 }
                 return `<div class="pack-q">
+                  <input type="checkbox" class="pack-q-check" data-check="${pack.id}::${q.id}" ${selectedQs.has(`${pack.id}::${q.id}`) ? 'checked' : ''} aria-label="Select question for moving">
                   <span class="pack-q-text" title="${escapeAttr(q.text)}">${escapeHTML(q.text)}</span>
                   <span class="pack-q-rarity" style="color:${r.color}">${r.label}</span>
                   <button class="pack-q-edit-btn" data-edit="${pack.id}::${q.id}" aria-label="Edit question">
@@ -462,6 +476,7 @@
           if (updated) syncDeckWithPack(updated);
         }
         deletingPackId = null;
+        selectedQs.clear();
         renderPacks();
       });
     });
@@ -472,6 +487,7 @@
         const id = hdr.dataset.packId;
         openPackId = String(openPackId) === id ? null : id;
         deletingPackId = null;
+        selectedQs.clear();
         renderPacks();
       });
     });
@@ -490,6 +506,7 @@
         await addQuestionToPack(packId, text, rarity, category);
         input.value = '';
         deletingPackId = null;
+        selectedQs.clear();
         renderPacks();
       });
     });
@@ -504,6 +521,7 @@
         await deleteQuestionFromPack(packId, qid);
         await loadMarks();               /* server may have dropped orphaned marks */
         deletingPackId = null;
+        selectedQs.clear();
         renderPacks();
       });
     });
@@ -528,6 +546,7 @@
           showToast("Couldn't delete the pack — check the connection");
         }
         deletingPackId = null;
+        selectedQs.clear();
         renderPacks();
       });
     });
@@ -535,7 +554,44 @@
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         deletingPackId = null;
+        selectedQs.clear();
         renderPacks();
+      });
+    });
+
+    /* Select questions for moving */
+    document.querySelectorAll('.pack-q-check').forEach(cb => {
+      cb.addEventListener('click', (e) => e.stopPropagation());
+      cb.addEventListener('change', () => {
+        if (cb.checked) selectedQs.add(cb.dataset.check);
+        else selectedQs.delete(cb.dataset.check);
+        renderPacks();
+      });
+    });
+
+    /* Move selected questions to another pack */
+    document.querySelectorAll('[data-move-btn]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const fromId = btn.dataset.moveBtn;
+        const select = document.querySelector(`[data-move-select="${fromId}"]`);
+        if (!select) return;
+        const toId = select.value;
+        const qids = [...selectedQs]
+          .filter(k => k.startsWith(`${fromId}::`))
+          .map(k => k.slice(`${fromId}::`.length));
+        if (qids.length === 0) return;
+        const moved = await window.store.moveQuestions(fromId, toId, qids);
+        if (!moved) {
+          showToast("Couldn't move those — check the connection");
+          return;
+        }
+        await loadMarks();               /* backend rewrote mark qkeys */
+        applyMoveToPlay(toId, moved);    /* needs fresh marks for isRetired */
+        await loadPacks();               /* refresh both packs' question lists */
+        selectedQs.clear();
+        renderPacks();
+        showToast(`Moved ${moved.length} ${moved.length === 1 ? 'question' : 'questions'}`);
       });
     });
 
@@ -544,6 +600,7 @@
       btn.addEventListener('click', async () => {
         await setMark('favorites', btn.dataset.unfav, false);
         deletingPackId = null;
+        selectedQs.clear();
         renderPacks();
       });
     });
@@ -553,6 +610,7 @@
       btn.addEventListener('click', async () => {
         await setMark('retired', btn.dataset.restore, false);
         deletingPackId = null;
+        selectedQs.clear();
         renderPacks();
       });
     });
@@ -567,6 +625,7 @@
         e.stopPropagation();
         editingQ = btn.dataset.edit;
         deletingPackId = null;
+        selectedQs.clear();
         renderPacks();
         const form = document.querySelector('.pack-q-edit');
         if (form) form.querySelector('input').focus();
@@ -578,6 +637,7 @@
       btn.addEventListener('click', () => {
         editingQ = null;
         deletingPackId = null;
+        selectedQs.clear();
         renderPacks();
       });
     });
@@ -597,6 +657,7 @@
         if (!updated) { showToast("Couldn't save the edit"); return; }
         editingQ = null;
         deletingPackId = null;
+        selectedQs.clear();
         renderPacks();
       });
     });
@@ -804,6 +865,47 @@
     if (currentCard && currentCard.qkey.startsWith(prefix)) {
       currentCard = null;
       if (deck.length > 0) drawCard(); else showEmptyState();
+    }
+    updateUI();
+    renderAnsweredList();
+    saveCurrentSession();
+  }
+
+  /* Reconcile live piles after questions moved between packs: history cards
+     (answered/skipped/current) keep playing under their new identity; deck
+     membership follows the destination pack's enabled state. */
+  function applyMoveToPlay(toPackId, moved) {
+    const toPack = questionPacks.find(p => String(p.id) === String(toPackId));
+    const destEnabled = !!(toPack && toPack.enabled);
+    const destName = toPack ? toPack.name : '';
+    for (const { oldQkey, newQkey, question } of moved) {
+      for (const pile of [discard, skipped]) {
+        for (const card of pile) {
+          if (card.qkey === oldQkey) { card.qkey = newQkey; card.pack = destName; }
+        }
+      }
+      if (currentCard && currentCard.qkey === oldQkey) {
+        currentCard.qkey = newQkey;
+        currentCard.pack = destName;
+      }
+      const newCard = {
+        text: question.text,
+        rarity: question.rarity,
+        category: question.category || 'Custom',
+        pack: destName,
+        qkey: newQkey,
+      };
+      const idx = deck.findIndex(c => c.qkey === oldQkey);
+      if (idx !== -1) {
+        if (destEnabled) deck[idx] = newCard; else deck.splice(idx, 1);
+      } else if (destEnabled && !isRetired(newQkey)) {
+        /* source pack was disabled (card not in deck): shuffle it in unless
+           it's already live as the current/answered/skipped card */
+        const live = (currentCard && currentCard.qkey === newQkey)
+          || discard.some(c => c.qkey === newQkey)
+          || skipped.some(c => c.qkey === newQkey);
+        if (!live) deck.splice(Math.floor(Math.random() * (deck.length + 1)), 0, newCard);
+      }
     }
     updateUI();
     renderAnsweredList();
@@ -1390,6 +1492,8 @@
     $newPackForm.style.display = 'none';
     if (pack) {
       openPackId = pack.id;
+      deletingPackId = null;
+      selectedQs.clear();
       renderPacks();
       showToast(`"${pack.name}" pack created`);
     }
@@ -1423,13 +1527,24 @@
 
     for (const p of data) {
       const pack = await createPack(p.name);
-      if (!pack) { showToast(`Import stopped: couldn't create "${p.name}"`); renderPacks(); return; }
+      if (!pack) {
+        showToast(`Import stopped: couldn't create "${p.name}"`);
+        deletingPackId = null; selectedQs.clear();
+        renderPacks();
+        return;
+      }
       for (const q of p.questions) {
         const added = await addQuestionToPack(
           pack.id, q.text, RARITY[q.rarity] ? q.rarity : 'common', q.category || 'Custom');
-        if (!added) { showToast('Import stopped: a question was rejected'); renderPacks(); return; }
+        if (!added) {
+          showToast('Import stopped: a question was rejected');
+          deletingPackId = null; selectedQs.clear();
+          renderPacks();
+          return;
+        }
       }
     }
+    deletingPackId = null; selectedQs.clear();
     renderPacks();
     showToast(`Imported ${data.length} pack${data.length === 1 ? '' : 's'}`);
   }
