@@ -24,6 +24,7 @@ class PackAPITest(unittest.TestCase):
         # Point the server module at a throwaway data file.
         server.DATA_FILE = Path(cls._tmpdir.name) / "question_packs.json"
         server.USER_DATA_FILE = Path(cls._tmpdir.name) / "user_data.json"
+        server.FEATURED_PACKS_FILE = Path(cls._tmpdir.name) / "featured_packs.json"
         cls.httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.GameHandler)
         cls.port = cls.httpd.server_address[1]
         cls.base = f"http://127.0.0.1:{cls.port}"
@@ -39,6 +40,9 @@ class PackAPITest(unittest.TestCase):
     def setUp(self):
         server.DATA_FILE.write_text("[]")
         server.USER_DATA_FILE.write_text('{"favorites": [], "retired": []}')
+        server.FEATURED_PACKS_FILE.write_text(json.dumps([
+            {"key": "biblical-marriage", "name": "Biblical Marriage", "questions": []}
+        ]))
 
     def request(self, method, path, body=None):
         """Return (status, parsed_json) for a request to the test server."""
@@ -286,6 +290,59 @@ class PackAPITest(unittest.TestCase):
     def test_unknown_mark_list_404(self):
         status, err = self.request("POST", "/api/marks/loved/b1")
         self.assertEqual(status, 404)
+
+    # ── Featured pack prefs ──
+
+    def test_featured_prefs_default_empty(self):
+        status, prefs = self.request("GET", "/api/featured-pack-prefs")
+        self.assertEqual(status, 200)
+        self.assertEqual(prefs, {})
+
+    def test_set_featured_pref(self):
+        status, prefs = self.request(
+            "PUT", "/api/featured-pack-prefs/biblical-marriage", {"enabled": False})
+        self.assertEqual(status, 200)
+        self.assertEqual(prefs, {"biblical-marriage": False})
+        status, prefs = self.request("GET", "/api/featured-pack-prefs")
+        self.assertEqual(prefs, {"biblical-marriage": False})
+        status, prefs = self.request(
+            "PUT", "/api/featured-pack-prefs/biblical-marriage", {"enabled": True})
+        self.assertEqual(prefs, {"biblical-marriage": True})
+
+    def test_set_featured_pref_unknown_key_404(self):
+        status, err = self.request(
+            "PUT", "/api/featured-pack-prefs/no-such-pack", {"enabled": False})
+        self.assertEqual(status, 404)
+        self.assertIn("error", err)
+
+    def test_set_featured_pref_requires_boolean(self):
+        for bad in ({}, {"enabled": "false"}, {"enabled": 0}):
+            status, err = self.request(
+                "PUT", "/api/featured-pack-prefs/biblical-marriage", bad)
+            self.assertEqual(status, 400)
+            self.assertIn("error", err)
+
+    def test_featured_prefs_survive_other_user_data_writes(self):
+        """load_user_data must round-trip featuredPackPrefs, not drop it."""
+        self.request("PUT", "/api/featured-pack-prefs/biblical-marriage", {"enabled": False})
+        self.request("POST", "/api/marks/favorites/b12")
+        self.request("PUT", "/api/session", {"score": 3})
+        status, prefs = self.request("GET", "/api/featured-pack-prefs")
+        self.assertEqual(prefs, {"biblical-marriage": False})
+        status, marks = self.request("GET", "/api/marks")
+        self.assertEqual(set(marks.keys()), {"favorites", "retired"})
+
+    def test_mark_featured_question(self):
+        status, marks = self.request("POST", "/api/marks/favorites/fbiblical-marriage-3")
+        self.assertEqual(status, 200)
+        self.assertEqual(marks["favorites"], ["fbiblical-marriage-3"])
+        status, marks = self.request("DELETE", "/api/marks/favorites/fbiblical-marriage-3")
+        self.assertEqual(marks["favorites"], [])
+
+    def test_mark_invalid_featured_key_rejected(self):
+        for bad in ("f-1", "fUPPER-1", "fbiblical-marriage-", "fbiblical-marriage-x"):
+            status, err = self.request("POST", f"/api/marks/favorites/{bad}")
+            self.assertEqual(status, 400)
 
     def test_marks_persist_to_user_data_file(self):
         self.request("POST", "/api/marks/retired/b40")

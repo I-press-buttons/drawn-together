@@ -23,7 +23,20 @@ MAX_QUESTION_LEN = 300       # matches maxlength on the pack-add-input in index.
 PACKS_LOCK = threading.Lock()
 
 MARK_LISTS = ("favorites", "retired")
-MARK_KEY_RE = re.compile(r"^(b\d+|p\d+-\d+)$")
+MARK_KEY_RE = re.compile(r"^(b\d+|p\d+-\d+|f[a-z0-9][a-z0-9-]*-\d+)$")
+
+# Shipped featured-pack content lives next to server.py (static, read-only),
+# not in DATA_DIR — it's code, not user data. Tests point this elsewhere.
+FEATURED_PACKS_FILE = Path(__file__).parent / "featured_packs.json"
+
+
+def load_featured_pack_keys():
+    if FEATURED_PACKS_FILE.exists():
+        try:
+            return {p["key"] for p in json.loads(FEATURED_PACKS_FILE.read_text())}
+        except (json.JSONDecodeError, OSError, TypeError, KeyError):
+            pass
+    return set()
 
 
 def load_packs():
@@ -49,6 +62,8 @@ def load_user_data():
         raw = {}
     data = {k: list(raw.get(k, [])) for k in MARK_LISTS}
     data["session"] = raw.get("session")
+    prefs = raw.get("featuredPackPrefs", {})
+    data["featuredPackPrefs"] = dict(prefs) if isinstance(prefs, dict) else {}
     return data
 
 
@@ -151,6 +166,11 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/api/marks":
             data = load_user_data()
             json_response(self, {k: data[k] for k in MARK_LISTS})
+            return
+
+        # ── Featured pack prefs (per-viewer on/off) ──
+        if self.path == "/api/featured-pack-prefs":
+            json_response(self, load_user_data()["featuredPackPrefs"])
             return
 
         # ── Saved session (resume) ──
@@ -350,6 +370,26 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
                         json_response(self, q)
                         return
             json_response(self, {"error": "Question not found"}, 404)
+            return
+
+        # ── Set a featured pack pref ──
+        m = re.match(r"^/api/featured-pack-prefs/([a-z0-9-]+)$", self.path)
+        if m:
+            key = m.group(1)
+            body = read_json_body(self)
+            if body is None:
+                return
+            if not isinstance(body, dict) or not isinstance(body.get("enabled"), bool):
+                json_response(self, {"error": "enabled (boolean) required"}, 400)
+                return
+            if key not in load_featured_pack_keys():
+                json_response(self, {"error": "Unknown featured pack"}, 404)
+                return
+            with PACKS_LOCK:
+                data = load_user_data()
+                data["featuredPackPrefs"][key] = body["enabled"]
+                save_user_data(data)
+            json_response(self, data["featuredPackPrefs"])
             return
 
         json_response(self, {"error": "Not found"}, 404)
