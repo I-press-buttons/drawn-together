@@ -86,6 +86,12 @@
       catch (e) { return false; }
     },
 
+    /* Sharing is not available on the local server. */
+    async loadShares() { return {}; },
+    async sharePack() { return null; },
+    async revokeShare() { return false; },
+    async unlockPack() { return { error: 'Sharing is not available on this server' }; },
+
     /* Auth is a no-op on the local server. */
     ready() { return Promise.resolve(); },
     signedIn() { return true; },

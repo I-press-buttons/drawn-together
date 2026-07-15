@@ -20,6 +20,12 @@
 
   const EMPTY_MARKS = () => ({ favorites: [], retired: [] });
 
+  const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; /* no I,O,0,1 */
+  function generateShareCode() {
+    const bytes = crypto.getRandomValues(new Uint8Array(12));
+    return Array.from(bytes, b => CODE_ALPHABET[b % 32]).join('');
+  }
+
   window.store = {
     backend: 'supabase',
 
@@ -101,6 +107,33 @@
         newQkey: `p${toPackId}-${q.id}`,
         question: q,
       }));
+    },
+    async loadShares() {
+      if (!session) return {};
+      const { data, error } = await client.from('pack_shares').select('code, pack_id');
+      if (error) return {};
+      return data.reduce((acc, row) => { acc[row.pack_id] = row.code; return acc; }, {});
+    },
+    async sharePack(packId) {
+      const code = generateShareCode();
+      const { error } = await client.from('pack_shares').insert({ code, pack_id: packId });
+      if (!error) return code;
+      if (error.code === '23505') {
+        const { data } = await client.from('pack_shares')
+          .select('code').eq('pack_id', packId).single();
+        return data ? data.code : null;
+      }
+      return null;
+    },
+    async revokeShare(packId) {
+      const { error } = await client.from('pack_shares').delete().eq('pack_id', packId);
+      return !error;
+    },
+    async unlockPack(code) {
+      code = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const { data, error } = await client.rpc('unlock_pack', { share_code: code });
+      if (error) return { error: error.message };
+      return { pack: data };
     },
     async loadMarks() {
       if (!session) return EMPTY_MARKS();
