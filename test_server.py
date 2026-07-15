@@ -157,6 +157,100 @@ class PackAPITest(unittest.TestCase):
         status, err = self.request("DELETE", "/api/packs/999/questions/1")
         self.assertEqual(status, 404)
 
+    # ── Moving questions between packs ──
+
+    def make_move_fixture(self):
+        """Source pack with 3 questions + empty target pack."""
+        src = self.make_pack("Source")
+        dst = self.make_pack("Target")
+        qs = []
+        for text in ["Q one?", "Q two?", "Q three?"]:
+            _, q = self.request("POST", f"/api/packs/{src['id']}/questions", {"text": text})
+            qs.append(q)
+        return src, dst, qs
+
+    def test_move_questions(self):
+        src, dst, qs = self.make_move_fixture()
+        status, body = self.request(
+            "POST", f"/api/packs/{src['id']}/questions/move",
+            {"toPackId": dst["id"], "qids": [qs[0]["id"], qs[2]["id"]]},
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(len(body["moved"]), 2)
+        self.assertEqual(body["moved"][0]["oldQkey"], f"p{src['id']}-{qs[0]['id']}")
+        self.assertEqual(body["moved"][0]["question"]["text"], "Q one?")
+        _, packs = self.request("GET", "/api/packs")
+        by_id = {p["id"]: p for p in packs}
+        self.assertEqual([q["text"] for q in by_id[src["id"]]["questions"]], ["Q two?"])
+        self.assertEqual(
+            [q["text"] for q in by_id[dst["id"]]["questions"]], ["Q one?", "Q three?"])
+
+    def test_move_reassigns_colliding_ids(self):
+        src, dst, qs = self.make_move_fixture()
+        _, existing = self.request(
+            "POST", f"/api/packs/{dst['id']}/questions", {"text": "Existing?"})
+        # qs[0] has id 1, which collides with `existing` (also id 1) in the target
+        status, body = self.request(
+            "POST", f"/api/packs/{src['id']}/questions/move",
+            {"toPackId": dst["id"], "qids": [qs[0]["id"]]},
+        )
+        self.assertEqual(status, 200)
+        moved_q = body["moved"][0]["question"]
+        self.assertNotEqual(moved_q["id"], existing["id"])
+        self.assertEqual(body["moved"][0]["newQkey"], f"p{dst['id']}-{moved_q['id']}")
+
+    def test_move_rewrites_marks(self):
+        src, dst, qs = self.make_move_fixture()
+        self.request("POST", f"/api/marks/favorites/p{src['id']}-{qs[0]['id']}")
+        self.request("POST", f"/api/marks/retired/p{src['id']}-{qs[1]['id']}")
+        _, body = self.request(
+            "POST", f"/api/packs/{src['id']}/questions/move",
+            {"toPackId": dst["id"], "qids": [qs[0]["id"], qs[1]["id"]]},
+        )
+        _, marks = self.request("GET", "/api/marks")
+        self.assertEqual(marks["favorites"], [body["moved"][0]["newQkey"]])
+        self.assertEqual(marks["retired"], [body["moved"][1]["newQkey"]])
+
+    def test_move_to_same_pack_400(self):
+        src, dst, qs = self.make_move_fixture()
+        status, err = self.request(
+            "POST", f"/api/packs/{src['id']}/questions/move",
+            {"toPackId": src["id"], "qids": [qs[0]["id"]]},
+        )
+        self.assertEqual(status, 400)
+        self.assertIn("error", err)
+
+    def test_move_empty_or_missing_qids_400(self):
+        src, dst, qs = self.make_move_fixture()
+        for bad_body in ({"toPackId": dst["id"], "qids": []},
+                         {"toPackId": dst["id"]},
+                         {"qids": [qs[0]["id"]]}):
+            status, err = self.request(
+                "POST", f"/api/packs/{src['id']}/questions/move", bad_body)
+            self.assertEqual(status, 400)
+
+    def test_move_unknown_pack_404(self):
+        src, dst, qs = self.make_move_fixture()
+        status, _ = self.request(
+            "POST", "/api/packs/999/questions/move",
+            {"toPackId": dst["id"], "qids": [qs[0]["id"]]})
+        self.assertEqual(status, 404)
+        status, _ = self.request(
+            "POST", f"/api/packs/{src['id']}/questions/move",
+            {"toPackId": 999, "qids": [qs[0]["id"]]})
+        self.assertEqual(status, 404)
+
+    def test_move_unknown_qid_is_all_or_nothing_404(self):
+        src, dst, qs = self.make_move_fixture()
+        status, _ = self.request(
+            "POST", f"/api/packs/{src['id']}/questions/move",
+            {"toPackId": dst["id"], "qids": [qs[0]["id"], 999]})
+        self.assertEqual(status, 404)
+        _, packs = self.request("GET", "/api/packs")
+        by_id = {p["id"]: p for p in packs}
+        self.assertEqual(len(by_id[src["id"]]["questions"]), 3)  # nothing moved
+        self.assertEqual(by_id[dst["id"]]["questions"], [])
+
     # ── Marks ──
 
     def test_get_marks_empty(self):

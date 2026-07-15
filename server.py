@@ -219,6 +219,58 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
             json_response(self, {"error": "Pack not found"}, 404)
             return
 
+        # ── Move questions to another pack ──
+        m = re.match(r"^/api/packs/(\d+)/questions/move$", self.path)
+        if m:
+            from_id = int(m.group(1))
+            body = read_json_body(self)
+            if body is None:
+                return
+            to_id = body.get("toPackId")
+            qids = body.get("qids")
+            if not isinstance(to_id, int) or not isinstance(qids, list) or not qids \
+                    or not all(isinstance(q, int) for q in qids):
+                json_response(self, {"error": "toPackId and a non-empty qids list required"}, 400)
+                return
+            if to_id == from_id:
+                json_response(self, {"error": "Source and target pack are the same"}, 400)
+                return
+            qids = list(dict.fromkeys(qids))  # de-dupe, keep order
+            with PACKS_LOCK:
+                packs = load_packs()
+                src = next((p for p in packs if p["id"] == from_id), None)
+                dst = next((p for p in packs if p["id"] == to_id), None)
+                if src is None or dst is None:
+                    json_response(self, {"error": "Pack not found"}, 404)
+                    return
+                by_id = {q["id"]: q for q in src.get("questions", [])}
+                if any(qid not in by_id for qid in qids):
+                    json_response(self, {"error": "Question not found in source pack"}, 404)
+                    return
+                dst.setdefault("questions", [])
+                data = load_user_data()
+                marks_changed = False
+                moved = []
+                for qid in qids:
+                    q = by_id[qid]
+                    src["questions"].remove(q)
+                    new_qid = qid
+                    if any(t["id"] == new_qid for t in dst["questions"]):
+                        new_qid = _next_id(dst["questions"])
+                    q = {**q, "id": new_qid}
+                    dst["questions"].append(q)
+                    old_qkey, new_qkey = f"p{from_id}-{qid}", f"p{to_id}-{new_qid}"
+                    for lst in MARK_LISTS:
+                        if old_qkey in data[lst]:
+                            data[lst] = [new_qkey if k == old_qkey else k for k in data[lst]]
+                            marks_changed = True
+                    moved.append({"oldQkey": old_qkey, "newQkey": new_qkey, "question": q})
+                save_packs(packs)
+                if marks_changed:
+                    save_user_data(data)
+            json_response(self, {"moved": moved})
+            return
+
         # ── Add a mark ──
         if handle_mark_change(self, self.path, add=True):
             return
