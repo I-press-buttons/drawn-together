@@ -87,11 +87,13 @@
       const { data: markRows } = await client.from('marks')
         .select('list, qkey').in('qkey', oldKeys);
       if (markRows && markRows.length > 0) {
-        await client.from('marks').upsert(markRows.map(r => ({
+        const { error: upsertError } = await client.from('marks').upsert(markRows.map(r => ({
           list: r.list,
           qkey: `p${toPackId}-${r.qkey.slice(oldPrefix.length)}`,
         })));
-        await client.from('marks').delete().in('qkey', oldKeys);
+        if (upsertError) return null;
+        const { error: deleteError } = await client.from('marks').delete().in('qkey', oldKeys);
+        if (deleteError) return null;
       }
       return data.map(q => ({
         oldQkey: `${oldPrefix}${q.id}`,
