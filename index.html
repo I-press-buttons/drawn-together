@@ -92,6 +92,14 @@
               <button class="btn btn-ghost" id="startFreshBtn" type="button">Start Fresh</button>
             </div>
           </div>
+
+          <!-- Shown instead of the Draw button when the deck's empty but cards are waiting in the skipped pile -->
+          <div class="skipped-shuffle-back hidden" id="skippedShuffleBack">
+            <p class="remaining-badge">
+              <strong id="skippedShuffleCount">0</strong> skipped question<span id="skippedShufflePlural">s</span> waiting
+            </p>
+            <button class="btn btn-primary" id="skippedShuffleBtn" type="button">Shuffle skipped back in</button>
+          </div>
         </div>
 
         <!-- Active Card -->
@@ -147,6 +155,11 @@
     </aside>
   </div>
 
+  <!-- Skipped pile counter -->
+  <button class="skipped-pill hidden" id="skippedPill" type="button" title="View skipped questions">
+    Skipped <span id="skippedCount">0</span>
+  </button>
+
   <!-- Question Packs Modal -->
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal-sheet">
@@ -184,6 +197,23 @@
         <button class="btn btn-ghost" id="importPacksBtn" style="flex:1">Import packs</button>
         <input type="file" id="importPacksFile" accept=".json,application/json" hidden>
       </div>
+    </div>
+  </div>
+
+  <!-- Skipped Modal -->
+  <div class="modal-overlay" id="skippedModalOverlay">
+    <div class="modal-sheet">
+      <div class="modal-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <h2 class="modal-title">Skipped</h2>
+        <button class="modal-close" id="skippedModalClose" aria-label="Close">&times;</button>
+      </div>
+
+      <div id="skippedList"></div>
+
+      <button class="btn btn-ghost" id="skippedShuffleAllBtn" style="width:100%;margin-top:0.75rem">
+        Shuffle all back into deck
+      </button>
     </div>
   </div>
 

@@ -22,6 +22,7 @@
   /* ── Game State ── */
   let deck = [];
   let discard = [];
+  let skipped = [];
   let currentCard = null;
   let score = 0;
   let scoreEnabled = true;
@@ -178,6 +179,7 @@
     return {
       deckKeys: deck.map(q => q.qkey),
       discardKeys: discard.map(q => q.qkey),
+      skippedKeys: skipped.map(q => q.qkey),
       currentKey: currentCard ? currentCard.qkey : null,
       score,
       questionsAnswered,
@@ -196,6 +198,7 @@
     return {
       deck: resolve(raw.deckKeys || []),
       discard: resolve(raw.discardKeys || []),
+      skipped: resolve(raw.skippedKeys || []),
       currentCard: raw.currentKey && validKeys.has(raw.currentKey) ? findQuestionByKey(raw.currentKey) : null,
       score: raw.score || 0,
       questionsAnswered: raw.questionsAnswered || 0,
@@ -207,6 +210,7 @@
   function applyRehydratedSession(state) {
     deck = state.deck;
     discard = state.discard;
+    skipped = state.skipped;
     currentCard = state.currentCard;
     score = state.score;
     questionsAnswered = state.questionsAnswered;
@@ -250,7 +254,7 @@
     const raw = await window.store.loadSession();
     if (!raw) { resetGame(); return; }
     const state = rehydrateSession(raw);
-    const hasContent = state.discard.length > 0 || !!state.currentCard || state.score > 0;
+    const hasContent = state.discard.length > 0 || !!state.currentCard || state.score > 0 || state.skipped.length > 0;
     if (!hasContent) { resetGame(); return; }
     showResumePrompt(state);
   }
@@ -538,6 +542,16 @@
   const $resumeText   = document.getElementById('resumeText');
   const $resumeBtn    = document.getElementById('resumeBtn');
   const $startFreshBtn = document.getElementById('startFreshBtn');
+  const $skippedShuffleBack = document.getElementById('skippedShuffleBack');
+  const $skippedShuffleCount = document.getElementById('skippedShuffleCount');
+  const $skippedShufflePlural = document.getElementById('skippedShufflePlural');
+  const $skippedShuffleBtn = document.getElementById('skippedShuffleBtn');
+  const $skippedPill  = document.getElementById('skippedPill');
+  const $skippedCount = document.getElementById('skippedCount');
+  const $skippedModalOverlay = document.getElementById('skippedModalOverlay');
+  const $skippedModalClose = document.getElementById('skippedModalClose');
+  const $skippedList  = document.getElementById('skippedList');
+  const $skippedShuffleAllBtn = document.getElementById('skippedShuffleAllBtn');
   const $cardStage    = document.getElementById('cardStage');
   const $activeCard   = document.getElementById('activeCard');
   const $rarityDot    = document.getElementById('rarityDot');
@@ -684,7 +698,7 @@
   function syncDeckWithPack(pack) {
     const prefix = `p${pack.id}-`;
     if (pack.enabled) {
-      const inPlay = new Set([...deck, ...discard].map(q => q.qkey));
+      const inPlay = new Set([...deck, ...discard, ...skipped].map(q => q.qkey));
       if (currentCard) inPlay.add(currentCard.qkey);
       const additions = pack.questions
         .map(q => ({
@@ -698,6 +712,7 @@
       if (additions.length > 0) deck = shuffle([...deck, ...additions]);
     } else {
       deck = deck.filter(q => !q.qkey.startsWith(prefix));
+      skipped = skipped.filter(q => !q.qkey.startsWith(prefix));
     }
     updateUI();
     if (!currentCard && deck.length > 0 && !$gameOver.classList.contains('hidden')) {
@@ -711,6 +726,7 @@
     /* Array.isArray guard: resetGame doubles as a click handler, which passes a MouseEvent */
     deck = shuffle(Array.isArray(customDeck) ? customDeck : getAllQuestions());
     discard = [];
+    skipped = [];
     currentCard = null;
     score = 0;
     questionsAnswered = 0;
@@ -742,6 +758,35 @@
     $cardStage.classList.add('hidden');
     $emptyState.classList.remove('hidden');
     $remainingCount.textContent = deck.length;
+
+    /* deck's empty but there are skipped cards waiting — offer to shuffle them
+       back in instead of the (useless) Draw button */
+    const showShuffleBack = deck.length === 0 && skipped.length > 0;
+    $drawControls.classList.toggle('hidden', showShuffleBack);
+    $skippedShuffleBack.classList.toggle('hidden', !showShuffleBack);
+    if (showShuffleBack) {
+      $skippedShuffleCount.textContent = skipped.length;
+      $skippedShufflePlural.textContent = skipped.length === 1 ? '' : 's';
+    }
+  }
+
+  /* Return the active card to the deck at a random index, clearing currentCard.
+     Used whenever a different card needs to take over as the active one. */
+  function stashCurrentCard() {
+    if (!currentCard) return;
+    deck.splice(Math.floor(Math.random() * (deck.length + 1)), 0, currentCard);
+    currentCard = null;
+  }
+
+  /* Merge the skipped pile back into the deck and reshuffle. Shared by the
+     empty-state prompt and the skipped modal's "shuffle all back" button. */
+  function reshuffleSkipped() {
+    if (skipped.length === 0) return;
+    deck = shuffle([...deck, ...skipped]);
+    skipped = [];
+    updateUI();
+    if (!currentCard) showEmptyState();
+    saveCurrentSession();
   }
 
   function showCard() {
@@ -799,8 +844,9 @@
     discard.unshift({ ...currentCard, id: Date.now() });
     currentCard = null;
 
-    /* a finished deck has nothing left to resume; otherwise persist progress */
-    if (deck.length === 0) {
+    /* a finished deck with nothing skipped has nothing left to resume;
+       otherwise persist progress (skipped cards can still be shuffled back in) */
+    if (deck.length === 0 && skipped.length === 0) {
       window.store.clearSession().catch(() => {});
     } else {
       saveCurrentSession();
@@ -813,20 +859,23 @@
     setTimeout(() => {
       updateUI();
       renderAnsweredList();
-      if (deck.length === 0) {
+      if (deck.length === 0 && skipped.length === 0) {
         showGameOver();
       } else {
         showEmptyState();
-        $drawBtn.focus();
+        if (deck.length === 0) {
+          $skippedShuffleBtn.focus();
+        } else {
+          $drawBtn.focus();
+        }
       }
     }, 300);
   }
 
   function skipCard() {
     if (!currentCard) return;
-    /* Put back and reshuffle into random position */
-    const idx = Math.floor(Math.random() * (deck.length + 1));
-    deck.splice(idx, 0, currentCard);
+    /* Move to the skipped pile instead of straight back into the deck */
+    skipped.unshift(currentCard);
     currentCard = null;
     saveCurrentSession();
 
@@ -836,7 +885,11 @@
     setTimeout(() => {
       updateUI();
       showEmptyState();
-      $drawBtn.focus();
+      if (deck.length === 0 && skipped.length > 0) {
+        $skippedShuffleBtn.focus();
+      } else {
+        $drawBtn.focus();
+      }
     }, 300);
   }
 
@@ -912,9 +965,53 @@
     $answeredShowAll.textContent = showAllAnswered ? 'Show recent' : `Show all (${discard.length})`;
   }
 
+  /* ── Skipped Modal ── */
+  function renderSkippedList() {
+    if (skipped.length === 0) {
+      $skippedList.innerHTML = '<p class="answered-empty">No skipped questions</p>';
+      return;
+    }
+    $skippedList.innerHTML = skipped.map((q) => {
+      const r = RARITY[q.rarity];
+      return `
+        <button class="skipped-item" type="button" data-qkey="${escapeAttr(q.qkey)}">
+          <span class="answered-item-dot" style="background: ${r.color}"></span>
+          <span class="answered-item-text" title="${escapeHTML(q.text)}">${escapeHTML(q.text)}</span>
+        </button>
+      `;
+    }).join('');
+  }
+
+  function openSkippedModal() {
+    renderSkippedList();
+    $skippedModalOverlay.classList.add('open');
+  }
+
+  function closeSkippedModal() {
+    $skippedModalOverlay.classList.remove('open');
+  }
+
+  /* Bring a skipped card back as the active card, bumping whatever's currently
+     active back into the deck first. */
+  function restoreSkippedCard(qkey) {
+    const idx = skipped.findIndex(q => q.qkey === qkey);
+    if (idx === -1) return;
+    const [card] = skipped.splice(idx, 1);
+    stashCurrentCard();
+    currentCard = card;
+    renderCard();
+    showCard();
+    $gameOver.classList.add('hidden');
+    closeSkippedModal();
+    updateUI();
+    saveCurrentSession();
+  }
+
   function updateUI() {
     $remainingCount.textContent = deck.length;
     $answeredCount.textContent = discard.length;
+    $skippedCount.textContent = skipped.length;
+    $skippedPill.classList.toggle('hidden', skipped.length === 0);
 
     /* score display */
     if (scoreEnabled) {
@@ -1035,6 +1132,26 @@
   $modalClose.addEventListener('click', closeModal);
   $modalOverlay.addEventListener('click', (e) => {
     if (e.target === $modalOverlay) closeModal();
+  });
+
+  /* ── Skipped Pile Event Listeners ── */
+  $skippedShuffleBtn.addEventListener('click', () => {
+    reshuffleSkipped();
+    $drawBtn.focus();
+  });
+  $skippedPill.addEventListener('click', openSkippedModal);
+  $skippedModalClose.addEventListener('click', closeSkippedModal);
+  $skippedModalOverlay.addEventListener('click', (e) => {
+    if (e.target === $skippedModalOverlay) closeSkippedModal();
+  });
+  $skippedList.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-qkey]');
+    if (!btn) return;
+    restoreSkippedCard(btn.dataset.qkey);
+  });
+  $skippedShuffleAllBtn.addEventListener('click', () => {
+    reshuffleSkipped();
+    closeSkippedModal();
   });
 
   /* ── Auth Event Listeners ── */
@@ -1209,6 +1326,9 @@
     }
     if (e.key === 'Escape' && $authOverlay.classList.contains('open')) {
       $authOverlay.classList.remove('open');
+    }
+    if (e.key === 'Escape' && $skippedModalOverlay.classList.contains('open')) {
+      closeSkippedModal();
     }
   });
 
