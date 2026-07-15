@@ -1202,6 +1202,55 @@
     -webkit-tap-highlight-color: transparent;
   }
   .pack-q-del:hover { color: oklch(0.55 0.18 25); background: var(--accent-subtle); }
+
+  .pack-del-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--ink-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.2s, background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .pack-del-btn svg { width: 0.875rem; height: 0.875rem; }
+  .pack-del-btn:hover, .pack-del-btn:focus-visible {
+    color: oklch(0.55 0.18 25);
+    background: var(--accent-subtle);
+  }
+
+  .pack-del-confirm {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.625rem;
+    border: 1px solid oklch(0.55 0.18 25 / 0.35);
+    border-radius: var(--radius-sm);
+    background: var(--accent-subtle);
+    font-size: 0.8125rem;
+    color: var(--ink-dim);
+  }
+  .pack-del-confirm-text { flex: 1 1 12rem; }
+  .pack-del-confirm-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
+  .pack-del-confirm-btn {
+    border: none;
+    border-radius: var(--radius-sm);
+    background: oklch(0.55 0.18 25);
+    color: oklch(1 0 0);
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.375rem 0.75rem;
+    cursor: pointer;
+  }
+  .pack-del-confirm-btn:hover { background: oklch(0.5 0.18 25); }
+
   .pack-q-empty {
     font-size: 0.75rem;
     color: var(--ink-muted);
