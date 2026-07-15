@@ -75,6 +75,30 @@
       await client.from('marks').delete().eq('qkey', `p${packId}-${qid}`);
       return true;
     },
+    async moveQuestions(fromPackId, toPackId, qids) {
+      const { data, error } = await client.from('questions')
+        .update({ pack_id: toPackId })
+        .in('id', qids).eq('pack_id', fromPackId)
+        .select('id, text, rarity, category');
+      if (error || !data || data.length !== qids.length) return null;
+      /* Rewrite marks: ids are unchanged, only the pack prefix moves. */
+      const oldPrefix = `p${fromPackId}-`;
+      const oldKeys = data.map(q => `${oldPrefix}${q.id}`);
+      const { data: markRows } = await client.from('marks')
+        .select('list, qkey').in('qkey', oldKeys);
+      if (markRows && markRows.length > 0) {
+        await client.from('marks').upsert(markRows.map(r => ({
+          list: r.list,
+          qkey: `p${toPackId}-${r.qkey.slice(oldPrefix.length)}`,
+        })));
+        await client.from('marks').delete().in('qkey', oldKeys);
+      }
+      return data.map(q => ({
+        oldQkey: `${oldPrefix}${q.id}`,
+        newQkey: `p${toPackId}-${q.id}`,
+        question: q,
+      }));
+    },
     async loadMarks() {
       if (!session) return EMPTY_MARKS();
       const { data, error } = await client.from('marks').select('list, qkey');

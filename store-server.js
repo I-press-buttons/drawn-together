@@ -46,6 +46,16 @@
     async deleteQuestion(packId, qid) {
       return (await fetch(`${API_BASE}/${packId}/questions/${qid}`, { method: 'DELETE' })).ok;
     },
+    async moveQuestions(fromPackId, toPackId, qids) {
+      try {
+        const res = await fetch(`${API_BASE}/${fromPackId}/questions/move`, {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ toPackId: Number(toPackId), qids: qids.map(Number) }),
+        });
+        const data = await json(res);
+        return data ? data.moved : null;
+      } catch (e) { return null; }
+    },
     async loadMarks() {
       try { return (await json(await fetch('/api/marks'))) || { favorites: [], retired: [] }; }
       catch (e) { return { favorites: [], retired: [] }; }
