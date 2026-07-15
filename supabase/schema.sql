@@ -95,11 +95,11 @@ begin
   insert into public.packs (user_id, name, enabled)
     values (auth.uid(), src_pack.name, true)
     returning * into new_pack;
-  insert into public.questions (pack_id, text, rarity, category)
-    select new_pack.id, q.text, q.rarity, q.category
+  insert into public.questions (pack_id, text, rarity, category, created_at)
+    select new_pack.id, q.text, q.rarity, q.category,
+           now() + (row_number() over (order by q.created_at, q.id)) * interval '1 millisecond'
     from public.questions q
-    where q.pack_id = src_pack.id
-    order by q.created_at;
+    where q.pack_id = src_pack.id;
   select coalesce(jsonb_agg(jsonb_build_object(
            'id', q.id, 'text', q.text, 'rarity', q.rarity, 'category', q.category)
            order by q.created_at), '[]'::jsonb)
