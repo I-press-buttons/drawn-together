@@ -78,6 +78,7 @@
 
   /* ── Question Packs (server-side) ── */
   let questionPacks = [];
+  let packShares = {};   /* { [packId]: code } — web backend, signed in only */
 
   /* ── User marks (favorites / retired, server-side) ── */
   let marks = { favorites: [], retired: [] };
@@ -118,6 +119,7 @@
 
   async function loadPacks() {
     questionPacks = await window.store.loadPacks();
+    packShares = await window.store.loadShares();
   }
 
   async function createPack(name) {
@@ -306,11 +308,33 @@
     $newPackBtn.classList.toggle('hidden', gated);
     $packGate.classList.toggle('hidden', !gated);
     if (gated) $newPackForm.style.display = 'none';
+
+    /* Sharing/unlock is web-backend-only, signed-in-only. */
+    const sharingAllowed = window.store.backend === 'supabase' && window.store.signedIn();
+    $unlockPackBtn.classList.toggle('hidden', !sharingAllowed);
+    if (!sharingAllowed) $unlockPackForm.style.display = 'none';
+  }
+
+  function renderPackShare(pack) {
+    const code = packShares[pack.id];
+    if (!code) {
+      return `<button class="btn btn-ghost pack-share-btn" type="button" data-share-pack="${pack.id}">Share pack</button>`;
+    }
+    const grouped = code.match(/.{4}/g).join('-');
+    return `
+      <div class="pack-share-row">
+        <code class="pack-share-code">${escapeHTML(grouped)}</code>
+        <button class="btn btn-ghost" type="button" data-copy-code="${pack.id}">Copy</button>
+        <button class="btn btn-ghost" type="button" data-revoke-share="${pack.id}">Stop sharing</button>
+      </div>
+      <p class="pack-share-hint">Anyone with this code can add a copy of this pack to their account.</p>
+    `;
   }
 
   function renderPacks() {
     const container = document.getElementById('packList');
     const totalCustom = questionPacks.reduce((s, p) => s + p.questions.length, 0);
+    const sharingAllowed = window.store.backend === 'supabase' && window.store.signedIn();
 
     /* Base game card (always shown, always on) */
     let html = `
@@ -405,6 +429,7 @@
               </div>
               <button class="pack-add-btn" type="submit">Add</button>
             </form>
+            ${sharingAllowed ? renderPackShare(pack) : ''}
           </div>
         </div>
       `;
@@ -642,6 +667,53 @@
       });
     });
 
+    /* Share a pack */
+    document.querySelectorAll('[data-share-pack]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.sharePack;
+        const code = await window.store.sharePack(id);
+        if (code) {
+          packShares[id] = code;
+          renderPacks();
+        } else {
+          showToast("Couldn't share the pack — try again");
+        }
+      });
+    });
+
+    /* Copy share code */
+    document.querySelectorAll('[data-copy-code]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.copyCode;
+        const code = packShares[id];
+        if (!code) return;
+        const grouped = code.match(/.{4}/g).join('-');
+        try {
+          await navigator.clipboard.writeText(grouped);
+          showToast('Code copied');
+        } catch {
+          showToast(`Code: ${grouped}`);
+        }
+      });
+    });
+
+    /* Stop sharing a pack */
+    document.querySelectorAll('[data-revoke-share]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.revokeShare;
+        if (await window.store.revokeShare(id)) {
+          delete packShares[id];
+          renderPacks();
+          showToast('Sharing stopped — the code no longer works');
+        } else {
+          showToast("Couldn't stop sharing — try again");
+        }
+      });
+    });
+
     /* Save edit */
     document.querySelectorAll('.pack-q-edit').forEach(form => {
       form.addEventListener('submit', async (e) => {
@@ -716,6 +788,9 @@
   const $newPackBtn  = document.getElementById('newPackBtn');
   const $packGate    = document.getElementById('packGate');
   const $packGateSignInBtn = document.getElementById('packGateSignInBtn');
+  const $unlockPackBtn  = document.getElementById('unlockPackBtn');
+  const $unlockPackForm = document.getElementById('unlockPackForm');
+  const $unlockCodeInput = document.getElementById('unlockCodeInput');
   const $mainArea     = document.getElementById('mainArea');
   const $authOverlay   = document.getElementById('authOverlay');
   const $authClose     = document.getElementById('authClose');
@@ -1496,6 +1571,29 @@
       selectedQs.clear();
       renderPacks();
       showToast(`"${pack.name}" pack created`);
+    }
+  });
+
+  /* Unlock a shared pack form toggle */
+  $unlockPackBtn.addEventListener('click', () => {
+    $unlockPackForm.style.display = $unlockPackForm.style.display === 'none' ? 'block' : 'none';
+    if ($unlockPackForm.style.display === 'block') $unlockCodeInput.focus();
+  });
+
+  $unlockPackForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const res = await window.store.unlockPack($unlockCodeInput.value);
+    if (res && res.pack) {
+      questionPacks.push(res.pack);
+      openPackId = res.pack.id;
+      $unlockCodeInput.value = '';
+      $unlockPackForm.style.display = 'none';
+      deletingPackId = null;
+      selectedQs.clear();
+      renderPacks();
+      showToast(`"${res.pack.name}" unlocked`);
+    } else {
+      showToast((res && res.error) || "Couldn't unlock that pack");
     }
   });
 

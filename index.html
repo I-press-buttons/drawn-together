@@ -197,6 +197,15 @@
         <button class="btn-add" type="submit">Create Pack</button>
       </form>
 
+      <!-- Unlock a shared pack (web backend, signed in only) -->
+      <button class="btn btn-ghost hidden" id="unlockPackBtn" style="width:100%;margin-top:0.75rem">Unlock shared pack</button>
+      <form id="unlockPackForm" autocomplete="off" style="display:none;margin-top:0.75rem">
+        <div class="form-group" style="margin-bottom:0.5rem">
+          <input class="form-input" id="unlockCodeInput" type="text" placeholder="Enter a share code..." maxlength="16" required>
+        </div>
+        <button class="btn-add" type="submit">Unlock</button>
+      </form>
+
       <!-- Export / import -->
       <div style="display:flex;gap:0.5rem;margin-top:0.75rem">
         <button class="btn btn-ghost" id="exportPacksBtn" style="flex:1">Export packs</button>

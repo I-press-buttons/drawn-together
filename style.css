@@ -1507,6 +1507,31 @@
 .pack-gate.hidden { display: none; }
 .pack-gate-text { color: var(--ink-muted); font-size: 0.875rem; margin: 0; }
 #newPackBtn.hidden { display: none; }
+#unlockPackBtn.hidden { display: none; }
+
+/* Pack sharing (web backend, signed in only) */
+.pack-share-btn { margin-top: 0.625rem; }
+.pack-share-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.625rem;
+}
+.pack-share-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.06em;
+  font-size: 0.8125rem;
+  background: var(--bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  padding: 0.375rem 0.625rem;
+}
+.pack-share-hint {
+  color: var(--ink-muted);
+  font-size: 0.8125rem;
+  margin: 0.375rem 0 0;
+}
 .account-control { display: flex; align-items: center; flex-shrink: 0; }
 .account-control.hidden { display: none; }
 .account-pill {
