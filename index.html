@@ -143,6 +143,12 @@
 
     <!-- Answered Sidebar -->
     <aside class="answered-sidebar" id="answeredSidebar">
+      <button class="answered-collapse-toggle" id="answeredCollapseToggle" type="button" aria-expanded="true" aria-label="Collapse answered list">
+        <svg class="answered-collapse-chevron" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <path d="M3 5l4 4 4-4"/>
+        </svg>
+        <span class="stat-value answered-collapse-count" id="answeredCollapseCount">0</span>
+      </button>
       <button class="answered-header" id="answeredMobileToggle" aria-expanded="false">
         <span>Answered</span>
         <span class="stat-value" id="answeredCount">0</span>

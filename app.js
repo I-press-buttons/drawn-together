@@ -58,6 +58,24 @@
     /* default is light (already set on <html>) */
   }
 
+  /* ── Answered sidebar collapse (desktop only) ── */
+  function setSidebarCollapsed(collapsed) {
+    $answeredSidebar.classList.toggle('collapsed', collapsed);
+    $answeredCollapseToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    $answeredCollapseToggle.setAttribute('aria-label', collapsed ? 'Expand answered list' : 'Collapse answered list');
+    localStorage.setItem('dt_sidebar_collapsed', collapsed ? '1' : '0');
+  }
+
+  function toggleSidebarCollapsed() {
+    setSidebarCollapsed(!$answeredSidebar.classList.contains('collapsed'));
+  }
+
+  function loadSidebarCollapsed() {
+    if (localStorage.getItem('dt_sidebar_collapsed') === '1') {
+      setSidebarCollapsed(true);
+    }
+  }
+
   /* ── Question Packs (server-side) ── */
   let questionPacks = [];
 
@@ -570,6 +588,9 @@
   const $answeredList = document.getElementById('answeredList');
   const $answeredCount = document.getElementById('answeredCount');
   const $answeredShowAll = document.getElementById('answeredShowAll');
+  const $answeredSidebar = document.getElementById('answeredSidebar');
+  const $answeredCollapseToggle = document.getElementById('answeredCollapseToggle');
+  const $answeredCollapseCount = document.getElementById('answeredCollapseCount');
   const $scoreValue   = document.getElementById('scoreValue');
   const $scoreDisplay = document.getElementById('scoreDisplay');
   const $scoreToggle  = document.getElementById('scoreToggle');
@@ -961,6 +982,7 @@
     }
     $answeredList.classList.toggle('expanded', showAllAnswered);
     $answeredCount.textContent = discard.length;
+    $answeredCollapseCount.textContent = discard.length;
     $answeredShowAll.classList.toggle('hidden', discard.length <= 10);
     $answeredShowAll.textContent = showAllAnswered ? 'Show recent' : `Show all (${discard.length})`;
   }
@@ -1036,6 +1058,7 @@
   function updateUI() {
     $remainingCount.textContent = deck.length;
     $answeredCount.textContent = discard.length;
+    $answeredCollapseCount.textContent = discard.length;
     $skippedCount.textContent = skipped.length;
     $skippedPill.classList.toggle('hidden', skipped.length === 0);
 
@@ -1152,6 +1175,8 @@
     showAllAnswered = !showAllAnswered;
     renderAnsweredList();
   });
+
+  $answeredCollapseToggle.addEventListener('click', toggleSidebarCollapsed);
 
   $answeredList.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-qkey]');
@@ -1413,6 +1438,7 @@
 
   /* ── Boot ── */
   loadTheme();
+  loadSidebarCollapsed();
   (async () => {
     await loadQuestions();
     await window.store.ready();
