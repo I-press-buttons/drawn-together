@@ -87,8 +87,9 @@ One-time setup:
    editor.
 2. In Authentication → Sign In / Up, disable **Allow new users to sign up**
    (accounts become invite-only; invite emails from the Users page).
-3. In Authentication → URL Configuration, set the site URL to your Pages URL
-   (e.g. `https://<user>.github.io/<repo>/`).
+3. In Authentication → URL Configuration, set the site URL to your Pages root
+   (`https://<user>.github.io/<repo>/`) and add the game URL to Redirect URLs
+   (`https://<user>.github.io/<repo>/play/`).
 4. Put your project URL and publishable key in `config.web.js`.
 5. In the repo settings, enable Pages with source "GitHub Actions".
 
