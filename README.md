@@ -12,6 +12,8 @@ stdlib server — no frameworks, no build step, no pip installs.
   with a glow reveal for legendary and mythic draws
 - **Custom question packs** — create, edit, enable/disable, export and
   import packs as JSON
+- **Pack sharing** (hosted web version) — share a pack as an unlock code;
+  anyone who redeems the code gets their own editable copy
 - **Greatest hits** — heart a question mid-game and replay your favorites
   as their own round
 - **Retire questions** you never want to see again (with undo)
