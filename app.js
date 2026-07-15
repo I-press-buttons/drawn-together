@@ -461,6 +461,7 @@
           const updated = questionPacks.find(p => String(p.id) === id);
           if (updated) syncDeckWithPack(updated);
         }
+        deletingPackId = null;
         renderPacks();
       });
     });
@@ -488,6 +489,7 @@
         const category = selects[1].value;
         await addQuestionToPack(packId, text, rarity, category);
         input.value = '';
+        deletingPackId = null;
         renderPacks();
       });
     });
@@ -501,6 +503,7 @@
         const qid = btn.dataset.qid;
         await deleteQuestionFromPack(packId, qid);
         await loadMarks();               /* server may have dropped orphaned marks */
+        deletingPackId = null;
         renderPacks();
       });
     });
@@ -540,6 +543,7 @@
     document.querySelectorAll('[data-unfav]').forEach(btn => {
       btn.addEventListener('click', async () => {
         await setMark('favorites', btn.dataset.unfav, false);
+        deletingPackId = null;
         renderPacks();
       });
     });
@@ -548,6 +552,7 @@
     document.querySelectorAll('[data-restore]').forEach(btn => {
       btn.addEventListener('click', async () => {
         await setMark('retired', btn.dataset.restore, false);
+        deletingPackId = null;
         renderPacks();
       });
     });
@@ -561,6 +566,7 @@
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         editingQ = btn.dataset.edit;
+        deletingPackId = null;
         renderPacks();
         const form = document.querySelector('.pack-q-edit');
         if (form) form.querySelector('input').focus();
@@ -571,6 +577,7 @@
     document.querySelectorAll('[data-cancel-edit]').forEach(btn => {
       btn.addEventListener('click', () => {
         editingQ = null;
+        deletingPackId = null;
         renderPacks();
       });
     });
@@ -589,6 +596,7 @@
         });
         if (!updated) { showToast("Couldn't save the edit"); return; }
         editingQ = null;
+        deletingPackId = null;
         renderPacks();
       });
     });
