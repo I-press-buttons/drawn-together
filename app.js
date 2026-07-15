@@ -951,11 +951,11 @@
       $answeredList.innerHTML = visible.map((q) => {
         const r = RARITY[q.rarity];
         return `
-          <div class="answered-item">
+          <button class="answered-item" type="button" data-qkey="${escapeAttr(q.qkey)}">
             <span class="answered-item-dot" style="background: ${r.color}"></span>
             <span class="answered-item-text" title="${escapeHTML(q.text)}">${escapeHTML(q.text)}</span>
             ${scoreEnabled ? `<span class="answered-item-score" style="color: ${r.color}">+${r.points}</span>` : ''}
-          </div>
+          </button>
         `;
       }).join('');
     }
@@ -1004,6 +1004,32 @@
     $gameOver.classList.add('hidden');
     closeSkippedModal();
     updateUI();
+    saveCurrentSession();
+  }
+
+  /* Bring an answered card back as the active card: pull it out of the discard
+     pile, reverse its score credit, and let it be answered/skipped again. */
+  function unanswerCard(qkey) {
+    const idx = discard.findIndex(q => q.qkey === qkey);
+    if (idx === -1) return;
+    const [card] = discard.splice(idx, 1);
+
+    if (scoreEnabled) {
+      score = Math.max(0, score - RARITY[card.rarity].points);
+    }
+    questionsAnswered = Math.max(0, questionsAnswered - 1);
+
+    rarestAnswered = discard.reduce((rarest, q) => {
+      if (!rarest || RARITY[q.rarity].points > RARITY[rarest.rarity].points) return q;
+      return rarest;
+    }, null);
+
+    stashCurrentCard();
+    currentCard = card;
+    renderCard();
+    showCard();
+    updateUI();
+    renderAnsweredList();
     saveCurrentSession();
   }
 
@@ -1125,6 +1151,12 @@
   $answeredShowAll.addEventListener('click', () => {
     showAllAnswered = !showAllAnswered;
     renderAnsweredList();
+  });
+
+  $answeredList.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-qkey]');
+    if (!btn) return;
+    unanswerCard(btn.dataset.qkey);
   });
 
   /* ── Modal Event Listeners ── */
