@@ -84,8 +84,9 @@
       /* Rewrite marks: ids are unchanged, only the pack prefix moves. */
       const oldPrefix = `p${fromPackId}-`;
       const oldKeys = data.map(q => `${oldPrefix}${q.id}`);
-      const { data: markRows } = await client.from('marks')
+      const { data: markRows, error: marksError } = await client.from('marks')
         .select('list, qkey').in('qkey', oldKeys);
+      if (marksError) return null;
       if (markRows && markRows.length > 0) {
         const { error: upsertError } = await client.from('marks').upsert(markRows.map(r => ({
           list: r.list,

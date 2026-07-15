@@ -381,7 +381,7 @@
                   </form>`;
                 }
                 return `<div class="pack-q">
-                  <input type="checkbox" class="pack-q-check" data-check="${pack.id}::${q.id}" ${selectedQs.has(`${pack.id}::${q.id}`) ? 'checked' : ''} aria-label="Select question for moving">
+                  <input type="checkbox" class="pack-q-check" data-check="${pack.id}::${q.id}" ${selectedQs.has(`${pack.id}::${q.id}`) ? 'checked' : ''} aria-label="Select &quot;${escapeAttr(q.text)}&quot; for moving">
                   <span class="pack-q-text" title="${escapeAttr(q.text)}">${escapeHTML(q.text)}</span>
                   <span class="pack-q-rarity" style="color:${r.color}">${r.label}</span>
                   <button class="pack-q-edit-btn" data-edit="${pack.id}::${q.id}" aria-label="Edit question">
