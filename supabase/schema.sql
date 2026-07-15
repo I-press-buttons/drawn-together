@@ -114,3 +114,17 @@ $$;
 
 revoke execute on function public.unlock_pack(text) from public, anon;
 grant execute on function public.unlock_pack(text) to authenticated;
+
+-- Per-viewer on/off toggle for shipped featured packs (content is static in
+-- featured_packs.json; only the preference is stored). Missing row = enabled.
+create table if not exists public.featured_pack_prefs (
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  pack_key text not null check (char_length(pack_key) <= 60),
+  enabled boolean not null,
+  primary key (user_id, pack_key)
+);
+
+alter table public.featured_pack_prefs enable row level security;
+
+create policy "own featured prefs" on public.featured_pack_prefs
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());

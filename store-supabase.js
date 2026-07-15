@@ -20,6 +20,14 @@
 
   const EMPTY_MARKS = () => ({ favorites: [], retired: [] });
 
+  /* Anonymous visitors have no account row to store the toggle in — keep it
+     device-local. Signed-in users use the featured_pack_prefs table instead. */
+  const FEATURED_PREFS_LS_KEY = 'dt_featured_pack_prefs';
+  function readLocalFeaturedPrefs() {
+    try { return JSON.parse(localStorage.getItem(FEATURED_PREFS_LS_KEY)) || {}; }
+    catch (e) { return {}; }
+  }
+
   const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; /* no I,O,0,1 */
   function generateShareCode() {
     const bytes = crypto.getRandomValues(new Uint8Array(12));
@@ -167,6 +175,27 @@
       if (!session) return false;
       const { error } = await client.from('sessions').delete().eq('user_id', session.user.id);
       return !error;
+    },
+    async loadFeaturedPackPrefs() {
+      if (!session) return readLocalFeaturedPrefs();
+      const { data, error } = await client.from('featured_pack_prefs')
+        .select('pack_key, enabled');
+      if (error) return {};
+      const prefs = {};
+      for (const row of data) prefs[row.pack_key] = row.enabled;
+      return prefs;
+    },
+    async setFeaturedPackPref(key, enabled) {
+      if (!session) {
+        const prefs = readLocalFeaturedPrefs();
+        prefs[key] = enabled;
+        try { localStorage.setItem(FEATURED_PREFS_LS_KEY, JSON.stringify(prefs)); }
+        catch (e) { return null; }
+        return prefs;
+      }
+      const { error } = await client.from('featured_pack_prefs')
+        .upsert({ pack_key: key, enabled });
+      return error ? null : this.loadFeaturedPackPrefs();
     },
 
     ready() { return readyPromise; },

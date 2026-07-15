@@ -85,6 +85,19 @@
       try { return (await fetch('/api/session', { method: 'DELETE' })).ok; }
       catch (e) { return false; }
     },
+    async loadFeaturedPackPrefs() {
+      try { return (await json(await fetch('/api/featured-pack-prefs'))) || {}; }
+      catch (e) { return {}; }
+    },
+    async setFeaturedPackPref(key, enabled) {
+      try {
+        const res = await fetch(`/api/featured-pack-prefs/${key}`, {
+          method: 'PUT', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ enabled }),
+        });
+        return json(res);
+      } catch (e) { return null; }
+    },
 
     /* Sharing is not available on the local server. */
     async loadShares() { return {}; },
