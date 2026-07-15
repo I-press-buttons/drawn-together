@@ -1,0 +1,260 @@
+[
+  {
+    "key": "biblical-marriage",
+    "name": "Biblical Marriage",
+    "questions": [
+      {
+        "id": 1,
+        "text": "What Bible verse or story reminds you of our relationship?",
+        "rarity": "common",
+        "category": "Faith"
+      },
+      {
+        "id": 2,
+        "text": "What's a small act of service that makes you feel loved by me?",
+        "rarity": "common",
+        "category": "Faith"
+      },
+      {
+        "id": 3,
+        "text": "What worship song or hymn always makes you think of us?",
+        "rarity": "common",
+        "category": "Faith"
+      },
+      {
+        "id": 4,
+        "text": "What's your favorite way for us to pray together?",
+        "rarity": "common",
+        "category": "Faith"
+      },
+      {
+        "id": 5,
+        "text": "What's one way our faith shows up on an ordinary Tuesday for us?",
+        "rarity": "common",
+        "category": "Faith"
+      },
+      {
+        "id": 6,
+        "text": "What's a Bible character you think I remind you of?",
+        "rarity": "common",
+        "category": "Faith"
+      },
+      {
+        "id": 7,
+        "text": "What faith-based tradition would you like us to start as a couple?",
+        "rarity": "common",
+        "category": "Faith"
+      },
+      {
+        "id": 8,
+        "text": "What does it mean to you that God calls marriage a covenant rather than a contract?",
+        "rarity": "uncommon",
+        "category": "Faith"
+      },
+      {
+        "id": 9,
+        "text": "What's a Bible story about a married couple that stands out to you, and why?",
+        "rarity": "uncommon",
+        "category": "Faith"
+      },
+      {
+        "id": 10,
+        "text": "How do you like to be shown grace when you mess up with me?",
+        "rarity": "uncommon",
+        "category": "Faith"
+      },
+      {
+        "id": 11,
+        "text": "What's one way I've shown you Christ-like patience recently?",
+        "rarity": "uncommon",
+        "category": "Faith"
+      },
+      {
+        "id": 12,
+        "text": "What spiritual discipline would you like us to try together (fasting, journaling, a shared devotional)?",
+        "rarity": "uncommon",
+        "category": "Faith"
+      },
+      {
+        "id": 13,
+        "text": "What's a prayer request you don't say out loud enough?",
+        "rarity": "uncommon",
+        "category": "Faith"
+      },
+      {
+        "id": 14,
+        "text": "How has serving side by side — church, community, or family — deepened our bond?",
+        "rarity": "uncommon",
+        "category": "Faith"
+      },
+      {
+        "id": 15,
+        "text": "What does 1 Corinthians 13's description of love challenge you most to grow in?",
+        "rarity": "rare",
+        "category": "Faith"
+      },
+      {
+        "id": 16,
+        "text": "How has watching me pray shaped the way you see our marriage?",
+        "rarity": "rare",
+        "category": "Faith"
+      },
+      {
+        "id": 17,
+        "text": "What's one way you'd like us to serve our church or community together?",
+        "rarity": "rare",
+        "category": "Faith"
+      },
+      {
+        "id": 18,
+        "text": "Where do you see God's hand in how we met or grew together?",
+        "rarity": "rare",
+        "category": "Faith"
+      },
+      {
+        "id": 19,
+        "text": "What's a fear about our marriage you'd like to bring before God together?",
+        "rarity": "rare",
+        "category": "Faith"
+      },
+      {
+        "id": 20,
+        "text": "What does it look like for us to \"outdo one another in showing honor\" day to day?",
+        "rarity": "rare",
+        "category": "Faith"
+      },
+      {
+        "id": 21,
+        "text": "What's a habit of gratitude toward God you wish we practiced more as a couple?",
+        "rarity": "rare",
+        "category": "Faith"
+      },
+      {
+        "id": 22,
+        "text": "Where do you see us living out sacrificial love for each other most clearly, and where do we still need to grow?",
+        "rarity": "epic",
+        "category": "Faith"
+      },
+      {
+        "id": 23,
+        "text": "What's a wound from your past that you're trusting God to heal within our marriage?",
+        "rarity": "epic",
+        "category": "Faith"
+      },
+      {
+        "id": 24,
+        "text": "How do you want us to handle conflict in a way that honors God?",
+        "rarity": "epic",
+        "category": "Faith"
+      },
+      {
+        "id": 25,
+        "text": "What would it look like for our home to be a place of hospitality and ministry to others?",
+        "rarity": "epic",
+        "category": "Faith"
+      },
+      {
+        "id": 26,
+        "text": "What's a prayer you've been afraid to say out loud with me?",
+        "rarity": "epic",
+        "category": "Faith"
+      },
+      {
+        "id": 27,
+        "text": "What does true partnership, not just compromise, look like for us spiritually?",
+        "rarity": "epic",
+        "category": "Faith"
+      },
+      {
+        "id": 28,
+        "text": "What's one belief about faith you hope we never stop wrestling with together?",
+        "rarity": "epic",
+        "category": "Faith"
+      },
+      {
+        "id": 29,
+        "text": "If our marriage is meant to reflect God's love, where do you feel that most clearly, and where does it feel hardest?",
+        "rarity": "legendary",
+        "category": "Faith"
+      },
+      {
+        "id": 30,
+        "text": "What's the deepest way you need me to intercede for you in prayer right now?",
+        "rarity": "legendary",
+        "category": "Faith"
+      },
+      {
+        "id": 31,
+        "text": "What generational pattern do you hope our faith breaks for our family?",
+        "rarity": "legendary",
+        "category": "Faith"
+      },
+      {
+        "id": 32,
+        "text": "What does forgiveness look like for something you're still carrying?",
+        "rarity": "legendary",
+        "category": "Faith"
+      },
+      {
+        "id": 33,
+        "text": "What promise from Scripture do you cling to when our marriage feels hard?",
+        "rarity": "legendary",
+        "category": "Faith"
+      },
+      {
+        "id": 34,
+        "text": "What's a truth about God you've come to know only because of how we've loved each other?",
+        "rarity": "legendary",
+        "category": "Faith"
+      },
+      {
+        "id": 35,
+        "text": "What do you think God is still trying to teach us through our marriage?",
+        "rarity": "legendary",
+        "category": "Faith"
+      },
+      {
+        "id": 36,
+        "text": "If God asked us today what our marriage has taught us about His love, what would we say?",
+        "rarity": "mythic",
+        "category": "Faith"
+      },
+      {
+        "id": 37,
+        "text": "Imagine standing before God together at the end of our lives — what do you hope He says about how we loved each other?",
+        "rarity": "mythic",
+        "category": "Faith"
+      },
+      {
+        "id": 38,
+        "text": "What do you believe is the purpose God has for our marriage beyond the two of us?",
+        "rarity": "mythic",
+        "category": "Faith"
+      },
+      {
+        "id": 39,
+        "text": "If our marriage is a living testimony, what story is it telling right now?",
+        "rarity": "mythic",
+        "category": "Faith"
+      },
+      {
+        "id": 40,
+        "text": "What would it mean for our love to outlast us, the way faith is meant to be passed down?",
+        "rarity": "mythic",
+        "category": "Faith"
+      },
+      {
+        "id": 41,
+        "text": "If we could leave one piece of spiritual wisdom for our children about marriage, what would it be?",
+        "rarity": "mythic",
+        "category": "Faith"
+      },
+      {
+        "id": 42,
+        "text": "When you imagine our marriage fully redeemed and whole, what does that look like?",
+        "rarity": "mythic",
+        "category": "Faith"
+      }
+    ]
+  }
+]

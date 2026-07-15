@@ -26,7 +26,7 @@ jobs:
         run: |
           mkdir -p _site/play
           cp landing.html _site/index.html
-          cp index.html style.css app.js store-server.js store-supabase.js questions.json _site/play/
+          cp index.html style.css app.js store-server.js store-supabase.js questions.json featured_packs.json _site/play/
           cp -r vendor _site/play/vendor
           cp config.web.js _site/play/config.js
           touch _site/.nojekyll
