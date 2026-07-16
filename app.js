@@ -397,6 +397,24 @@
       </div>
     `;
 
+    /* Featured packs (shipped, read-only — toggle only, no expand/edit) */
+    for (const fp of FEATURED_PACKS) {
+      const on = isFeaturedPackEnabled(fp.key);
+      const qCount = fp.questions.length;
+      html += `
+        <div class="pack-card ${on ? '' : 'pack-card-off'}">
+          <div class="pack-header">
+            <button class="pack-toggle ${on ? 'on' : ''}" data-featured-toggle="${escapeAttr(fp.key)}" role="switch" aria-checked="${on ? 'true' : 'false'}" aria-label="${escapeAttr(fp.name)}: ${on ? 'on, tap to disable' : 'off, tap to enable'}">
+              <span class="pack-toggle-knob"></span>
+            </button>
+            <span class="pack-name">${escapeHTML(fp.name)}</span>
+            <span class="pack-base-tag">Featured</span>
+            <span class="pack-count">${qCount} ${qCount === 1 ? 'question' : 'questions'}</span>
+          </div>
+        </div>
+      `;
+    }
+
     /* Custom packs */
     for (const pack of questionPacks) {
       const isOpen = String(openPackId) === String(pack.id);
@@ -536,6 +554,21 @@
   }
 
   function bindPackEvents() {
+    /* Toggle featured pack on/off (works signed-out — it's per-viewer, free content) */
+    document.querySelectorAll('[data-featured-toggle]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const key = btn.dataset.featuredToggle;
+        const fp = FEATURED_PACKS.find(p => p.key === key);
+        if (!fp) return;
+        const next = !isFeaturedPackEnabled(key);
+        if (await toggleFeaturedPack(key, next)) {
+          syncDeckWithCards(`f${key}-`, featuredCards(fp), next);
+        }
+        renderPacks();
+      });
+    });
+
     /* Toggle pack on/off */
     document.querySelectorAll('[data-toggle]').forEach(btn => {
       btn.addEventListener('click', async (e) => {

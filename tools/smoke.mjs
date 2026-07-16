@@ -20,7 +20,7 @@ await page.goto(BASE, { waitUntil: 'networkidle' });
 
 // 1. Deck loaded
 const count = await page.textContent('#remainingCount');
-if (count !== '108') fail(`deck count ${count} != 108`);
+if (count !== '150') fail(`deck count ${count} != 150`);
 
 // 1b. Account control hidden on server backend (no real auth)
 const hidden = await page.evaluate(() =>
