@@ -6,3 +6,7 @@ __pycache__/
 user_data.json
 question_packs.json
 CLAUDE.md
+
+# Raw background photo originals live alongside the shipped optimized
+# copies in backgrounds/ — ignore only the originals, never the directory.
+backgrounds/pexels-*.jpg

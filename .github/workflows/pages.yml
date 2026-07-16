@@ -28,6 +28,7 @@ jobs:
           cp landing.html _site/index.html
           cp index.html style.css app.js store-server.js store-supabase.js questions.json featured_packs.json _site/play/
           cp -r vendor _site/play/vendor
+          cp -r backgrounds _site/play/backgrounds
           cp config.web.js _site/play/config.js
           touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3

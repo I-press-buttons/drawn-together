@@ -94,6 +94,39 @@
     /* default is light (already set on <html>) */
   }
 
+  /* ── Background ── */
+  const BACKGROUNDS = {
+    classic: null,
+    treeline: 'backgrounds/treeline.jpg',
+    lakeside: 'backgrounds/lakeside.jpg',
+    sunset: 'backgrounds/sunset.jpg',
+    alpine: 'backgrounds/alpine.jpg',
+  };
+
+  function setBackground(key) {
+    if (!Object.prototype.hasOwnProperty.call(BACKGROUNDS, key)) key = 'classic';
+    const url = BACKGROUNDS[key];
+    if (url) {
+      $photoBg.style.backgroundImage = `url('${url}')`;
+      $photoBg.classList.remove('hidden');
+      $mountains.classList.add('hidden');
+    } else {
+      $photoBg.classList.add('hidden');
+      $mountains.classList.remove('hidden');
+    }
+    $bgOptionList.querySelectorAll('.bg-option').forEach((opt) => {
+      const isSelected = opt.dataset.bg === key;
+      opt.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+      opt.tabIndex = isSelected ? 0 : -1;
+    });
+    localStorage.setItem('dt-background', key);
+  }
+
+  function loadBackground() {
+    const saved = localStorage.getItem('dt-background');
+    setBackground(saved || 'classic');
+  }
+
   /* ── Answered sidebar collapse (desktop only) ── */
   function setSidebarCollapsed(collapsed) {
     $answeredSidebar.classList.toggle('collapsed', collapsed);
@@ -911,6 +944,12 @@
   const $scoreTrack   = document.getElementById('scoreTrack');
   const $themeToggle  = document.getElementById('themeToggle');
   const $editBtn      = document.getElementById('editBtn');
+  const $mountains    = document.getElementById('mountainsBg');
+  const $photoBg      = document.getElementById('photoBg');
+  const $bgBtn        = document.getElementById('bgBtn');
+  const $bgModalOverlay = document.getElementById('bgModalOverlay');
+  const $bgModalClose = document.getElementById('bgModalClose');
+  const $bgOptionList = document.getElementById('bgOptionList');
   const $modalOverlay = document.getElementById('modalOverlay');
   const $modalClose   = document.getElementById('modalClose');
   const $newPackForm = document.getElementById('newPackForm');
@@ -1390,6 +1429,17 @@
     closeOverlay($skippedModalOverlay);
   }
 
+  function openBgModal() {
+    openOverlay($bgModalOverlay);
+    const selected = $bgOptionList.querySelector('.bg-option[aria-checked="true"]')
+      || $bgOptionList.querySelector('.bg-option');
+    if (selected) selected.focus();
+  }
+
+  function closeBgModal() {
+    closeOverlay($bgModalOverlay);
+  }
+
   /* Bring a skipped card back as the active card, bumping whatever's currently
      active back into the deck first. */
   function restoreSkippedCard(qkey) {
@@ -1588,6 +1638,37 @@
   $skippedModalClose.addEventListener('click', closeSkippedModal);
   $skippedModalOverlay.addEventListener('click', (e) => {
     if (e.target === $skippedModalOverlay) closeSkippedModal();
+  });
+
+  $bgBtn.addEventListener('click', openBgModal);
+  $bgModalClose.addEventListener('click', closeBgModal);
+  $bgModalOverlay.addEventListener('click', (e) => {
+    if (e.target === $bgModalOverlay) closeBgModal();
+  });
+  $bgOptionList.addEventListener('click', (e) => {
+    const opt = e.target.closest('.bg-option');
+    if (!opt) return;
+    setBackground(opt.dataset.bg);
+  });
+  $bgOptionList.addEventListener('keydown', (e) => {
+    const options = Array.from($bgOptionList.querySelectorAll('.bg-option'));
+    const current = options.indexOf(document.activeElement);
+    if (current === -1) return;
+    let next = -1;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      next = (current + 1) % options.length;
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      next = (current - 1 + options.length) % options.length;
+    } else if (e.key === 'Home') {
+      next = 0;
+    } else if (e.key === 'End') {
+      next = options.length - 1;
+    }
+    if (next !== -1) {
+      e.preventDefault();
+      setBackground(options[next].dataset.bg);
+      options[next].focus();
+    }
   });
   $skippedList.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-qkey]');
@@ -1811,6 +1892,9 @@
     if (e.key === 'Escape' && $skippedModalOverlay.classList.contains('open')) {
       closeSkippedModal();
     }
+    if (e.key === 'Escape' && $bgModalOverlay.classList.contains('open')) {
+      closeBgModal();
+    }
   });
 
   function updateDeckCount() {
@@ -1862,6 +1946,7 @@
 
   /* ── Boot ── */
   loadTheme();
+  loadBackground();
   loadSidebarCollapsed();
   (async () => {
     await Promise.all([loadQuestions(), loadFeaturedPacks()]);
