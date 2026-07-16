@@ -330,6 +330,56 @@
     return questionPacks.filter(p => p.enabled).length;
   }
 
+  /* ── Overlay open/close with focus trap (dialog a11y: WCAG 2.4.3 / 2.1.2) ──
+     Shared by all four .modal-overlay dialogs (packs, skipped, auth,
+     reset-password). openOverlay remembers the triggering element, moves
+     focus into the sheet, and traps Tab; closeOverlay restores focus. */
+  const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+  const overlayFocusReturn = new WeakMap();     /* overlayEl -> element to refocus on close */
+  const overlayKeydownHandlers = new WeakMap(); /* overlayEl -> its Tab-trap keydown listener */
+
+  function getFocusableIn(sheet) {
+    return [...sheet.querySelectorAll(FOCUSABLE_SELECTOR)]
+      .filter(el => el.offsetParent !== null || el === sheet);
+  }
+
+  function openOverlay(overlayEl) {
+    overlayFocusReturn.set(overlayEl, document.activeElement);
+    overlayEl.classList.add('open');
+    const sheet = overlayEl.querySelector('.modal-sheet');
+    const focusable = sheet ? getFocusableIn(sheet) : [];
+    const target = focusable[0] || (sheet && sheet.querySelector('.modal-close')) || sheet;
+    if (target) target.focus();
+    const onKeydown = (e) => {
+      if (e.key !== 'Tab' || !sheet) return;
+      const items = getFocusableIn(sheet);
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    overlayKeydownHandlers.set(overlayEl, onKeydown);
+    overlayEl.addEventListener('keydown', onKeydown);
+  }
+
+  function closeOverlay(overlayEl) {
+    overlayEl.classList.remove('open');
+    const handler = overlayKeydownHandlers.get(overlayEl);
+    if (handler) {
+      overlayEl.removeEventListener('keydown', handler);
+      overlayKeydownHandlers.delete(overlayEl);
+    }
+    const restore = overlayFocusReturn.get(overlayEl);
+    overlayFocusReturn.delete(overlayEl);
+    if (restore && document.body.contains(restore)) restore.focus();
+  }
+
   /* ── Modal / Pack UI ── */
   let openPackId = null;
   let editingQ = null;   /* "packId::qid" while a question row is in edit mode */
@@ -338,11 +388,11 @@
 
   function openModal() {
     renderPacks();
-    document.getElementById('modalOverlay').classList.add('open');
+    openOverlay(document.getElementById('modalOverlay'));
   }
 
   function closeModal() {
-    document.getElementById('modalOverlay').classList.remove('open');
+    closeOverlay(document.getElementById('modalOverlay'));
     openPackId = null;
     deletingPackId = null;
     selectedQs.clear();
@@ -354,12 +404,12 @@
     const gated = window.store.backend === 'supabase' && !window.store.signedIn();
     $newPackBtn.classList.toggle('hidden', gated);
     $packGate.classList.toggle('hidden', !gated);
-    if (gated) $newPackForm.style.display = 'none';
+    if (gated) $newPackForm.classList.add('hidden');
 
     /* Sharing/unlock is web-backend-only, signed-in-only. */
     const sharingAllowed = window.store.backend === 'supabase' && window.store.signedIn();
     $unlockPackBtn.classList.toggle('hidden', !sharingAllowed);
-    if (!sharingAllowed) $unlockPackForm.style.display = 'none';
+    if (!sharingAllowed) $unlockPackForm.classList.add('hidden');
   }
 
   function renderPackShare(pack) {
@@ -481,7 +531,7 @@
               }).join('')}
             </div>
             <form class="pack-add-form" data-pack-form="${pack.id}" autocomplete="off">
-              <input class="pack-add-input" type="text" placeholder="New question..." maxlength="300" required>
+              <input class="pack-add-input" type="text" placeholder="New question..." maxlength="300" required aria-label="New question">
               <div class="pack-add-meta">
                 <select>
                   ${Object.entries(RARITY).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('')}
@@ -505,7 +555,7 @@
     html += `
       <div class="pack-card marks-section">
         <div class="pack-header">
-          <span class="marks-section-icon" aria-hidden="true">♥</span>
+          <span class="marks-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 21C7 16.5 3 13.2 3 8.9 3 6.2 5.2 4 7.9 4c1.6 0 3.1.8 4.1 2.1C13 4.8 14.5 4 16.1 4 18.8 4 21 6.2 21 8.9c0 4.3-4 7.6-9 12.1z"/></svg></span>
           <span class="pack-name">Greatest Hits</span>
           <span class="pack-count">${favs.length} ${favs.length === 1 ? 'question' : 'questions'}</span>
         </div>
@@ -532,7 +582,7 @@
       html += `
         <div class="pack-card marks-section">
           <div class="pack-header">
-            <span class="marks-section-icon" aria-hidden="true">⊘</span>
+            <span class="marks-section-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg></span>
             <span class="pack-name">Retired</span>
             <span class="pack-count">${retired.length}</span>
           </div>
@@ -942,7 +992,7 @@
 
   function requireSignIn() {
     if (window.store.signedIn()) return true;
-    $authOverlay.classList.add('open');
+    openOverlay($authOverlay);
     ensureTurnstileWidget();
     return false;
   }
@@ -950,7 +1000,7 @@
   function syncAccountUI() {
     const email = window.store.userEmail();
     const signedIn = window.store.signedIn();
-    if (signedIn) $authOverlay.classList.remove('open');
+    if (signedIn) closeOverlay($authOverlay);
     /* local/Docker backend: signedIn() is always true with no email — no real auth, so hide the control entirely */
     const wasFocusInPill = $accountPill.contains(document.activeElement);
     $accountControl.classList.toggle('hidden', signedIn && !email);
@@ -1333,11 +1383,11 @@
 
   function openSkippedModal() {
     renderSkippedList();
-    $skippedModalOverlay.classList.add('open');
+    openOverlay($skippedModalOverlay);
   }
 
   function closeSkippedModal() {
-    $skippedModalOverlay.classList.remove('open');
+    closeOverlay($skippedModalOverlay);
   }
 
   /* Bring a skipped card back as the active card, bumping whatever's currently
@@ -1419,13 +1469,23 @@
     return escapeHTML(str).replace(/"/g, '&quot;');
   }
 
+  /* Permanent aria-live region announces toast text reliably — a toast that's
+     removed and re-added (or repeats the same message) doesn't always get
+     picked up by assistive tech, so the visual toast itself no longer carries
+     its own aria-live/role. */
+  function announceStatus(msg) {
+    const el = document.getElementById('srStatus');
+    if (!el) return;
+    el.textContent = '';
+    /* clear-then-set on the next tick so repeated messages still announce */
+    setTimeout(() => { el.textContent = msg; }, 50);
+  }
+
   function showToast(msg, action) {
     const existing = document.querySelector('.toast');
     if (existing) existing.remove();
     const el = document.createElement('div');
     el.className = 'toast';
-    el.setAttribute('role', 'status');
-    el.setAttribute('aria-live', 'polite');
     el.textContent = msg;
     if (action) {
       const btn = document.createElement('button');
@@ -1438,6 +1498,7 @@
     el.addEventListener('animationend', (e) => {
       if (e.animationName === 'toastOut') el.remove();
     });
+    announceStatus(msg);
   }
 
   /* ── Event Listeners ── */
@@ -1566,12 +1627,12 @@
   window.store.onAuthChange(updateAuthUI);
   window.store.onAuthChange((event) => {
     if (event === 'PASSWORD_RECOVERY') {
-      $authOverlay.classList.remove('open');
-      $resetPasswordOverlay.classList.add('open');
+      closeOverlay($authOverlay);
+      openOverlay($resetPasswordOverlay);
     }
   });
-  $signInBtn.addEventListener('click', () => { setAuthMode('signin'); $authOverlay.classList.add('open'); ensureTurnstileWidget(); });
-  $packGateSignInBtn.addEventListener('click', () => { setAuthMode('signin'); $authOverlay.classList.add('open'); ensureTurnstileWidget(); });
+  $signInBtn.addEventListener('click', () => { setAuthMode('signin'); openOverlay($authOverlay); ensureTurnstileWidget(); });
+  $packGateSignInBtn.addEventListener('click', () => { setAuthMode('signin'); openOverlay($authOverlay); ensureTurnstileWidget(); });
   $authModeToggle.addEventListener('click', (e) => {
     e.preventDefault();
     setAuthMode(authMode === 'signin' ? 'signup' : 'signin');
@@ -1604,11 +1665,11 @@
       : await window.store.signIn(email, password, turnstileToken);
     resetTurnstile();
     if (err) { showToast(err); return; }
-    $authOverlay.classList.remove('open');
+    closeOverlay($authOverlay);
   });
-  $authClose.addEventListener('click', () => $authOverlay.classList.remove('open'));
+  $authClose.addEventListener('click', () => closeOverlay($authOverlay));
   $authOverlay.addEventListener('click', (e) => {
-    if (e.target === $authOverlay) $authOverlay.classList.remove('open');
+    if (e.target === $authOverlay) closeOverlay($authOverlay);
   });
   $resetPasswordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1628,7 +1689,7 @@
       $resetPasswordError.classList.remove('hidden');
       return;
     }
-    $resetPasswordOverlay.classList.remove('open');
+    closeOverlay($resetPasswordOverlay);
     showToast('Password updated');
   });
   $signOutBtn.addEventListener('click', async () => {
@@ -1637,8 +1698,8 @@
 
   /* New pack form toggle */
   $newPackBtn.addEventListener('click', () => {
-    $newPackForm.style.display = $newPackForm.style.display === 'none' ? 'block' : 'none';
-    if ($newPackForm.style.display === 'block') $newPackName.focus();
+    $newPackForm.classList.toggle('hidden');
+    if (!$newPackForm.classList.contains('hidden')) $newPackName.focus();
   });
 
   $newPackForm.addEventListener('submit', async (e) => {
@@ -1647,7 +1708,7 @@
     if (!name) return;
     const pack = await createPack(name);
     $newPackName.value = '';
-    $newPackForm.style.display = 'none';
+    $newPackForm.classList.add('hidden');
     if (pack) {
       openPackId = pack.id;
       deletingPackId = null;
@@ -1659,8 +1720,8 @@
 
   /* Unlock a shared pack form toggle */
   $unlockPackBtn.addEventListener('click', () => {
-    $unlockPackForm.style.display = $unlockPackForm.style.display === 'none' ? 'block' : 'none';
-    if ($unlockPackForm.style.display === 'block') $unlockCodeInput.focus();
+    $unlockPackForm.classList.toggle('hidden');
+    if (!$unlockPackForm.classList.contains('hidden')) $unlockCodeInput.focus();
   });
 
   $unlockPackForm.addEventListener('submit', async (e) => {
@@ -1670,7 +1731,7 @@
       questionPacks.push(res.pack);
       openPackId = res.pack.id;
       $unlockCodeInput.value = '';
-      $unlockPackForm.style.display = 'none';
+      $unlockPackForm.classList.add('hidden');
       deletingPackId = null;
       selectedQs.clear();
       renderPacks();
@@ -1745,7 +1806,7 @@
       closeModal();
     }
     if (e.key === 'Escape' && $authOverlay.classList.contains('open')) {
-      $authOverlay.classList.remove('open');
+      closeOverlay($authOverlay);
     }
     if (e.key === 'Escape' && $skippedModalOverlay.classList.contains('open')) {
       closeSkippedModal();
@@ -1807,7 +1868,7 @@
     await window.store.ready();
     /* Sign-in is the first thing a signed-out web user sees (dismissible — anonymous play still works) */
     if (window.store.backend === 'supabase' && !window.store.signedIn()) {
-      $authOverlay.classList.add('open');
+      openOverlay($authOverlay);
       ensureTurnstileWidget();
     }
     /* onAuthChange(updateAuthUI) can register too late to catch the initial

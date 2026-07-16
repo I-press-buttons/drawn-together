@@ -1,5 +1,17 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
   /* ── Light Theme (default) ── */
   :root {
     --bg:       oklch(1 0 0);
@@ -7,7 +19,7 @@
     --surface-raised: oklch(0.94 0.007 68);
     --ink:      oklch(0.18 0.012 68);
     --ink-dim:  oklch(0.42 0.008 68);
-    --ink-muted: oklch(0.58 0.006 68);
+    --ink-muted: oklch(0.52 0.006 68);
     --primary:  oklch(0.60 0.18 65);
     --primary-glow: oklch(0.60 0.18 65 / 0.3);
     --primary-subtle: oklch(0.60 0.18 65 / 0.10);
@@ -48,7 +60,7 @@
     --surface-raised: oklch(0.17 0.008 68);
     --ink:      oklch(0.93 0.005 68);
     --ink-dim:  oklch(0.65 0.008 68);
-    --ink-muted: oklch(0.48 0.006 68);
+    --ink-muted: oklch(0.62 0.006 68);
     --primary:  oklch(0.72 0.16 65);
     --primary-glow: oklch(0.72 0.16 65 / 0.35);
     --primary-subtle: oklch(0.72 0.16 65 / 0.12);
@@ -168,8 +180,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 2rem;
-    height: 2rem;
+    width: 2.5rem;
+    height: 2.5rem;
     border-radius: 50%;
     border: none;
     background: transparent;
@@ -449,6 +461,8 @@
     letter-spacing: -0.01em;
     color: var(--ink);
     text-wrap: balance;
+    user-select: text;
+    -webkit-user-select: text;
   }
 
   .card-category {
@@ -726,7 +740,9 @@
   .game-over-icon {
     font-size: 2.5rem;
     margin-bottom: 0.25rem;
+    color: var(--primary);
   }
+  .game-over-icon svg { width: 2.5rem; height: 2.5rem; }
   .game-over-heading {
     font-family: var(--font-display);
     font-size: clamp(1.5rem, 0.6vw + 1.35rem, 1.875rem);
@@ -908,8 +924,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 2rem;
-    height: 2rem;
+    width: 2.5rem;
+    height: 2.5rem;
     border-radius: 50%;
     border: none;
     background: transparent;
@@ -1049,8 +1065,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 2rem;
+    height: 2rem;
     border-radius: 50%;
     border: none;
     background: transparent;
@@ -1189,8 +1205,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 1.375rem;
-    height: 1.375rem;
+    width: 1.75rem;
+    height: 1.75rem;
     border-radius: 50%;
     border: none;
     background: transparent;
@@ -1399,7 +1415,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0.375rem;
+  padding: 0.625rem;
   border-radius: 0.5rem;
   color: var(--text-muted, currentColor);
   opacity: 0.55;
@@ -1432,7 +1448,11 @@
   opacity: 0.7;
   width: 1.5rem;
   text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
+.marks-section-icon svg { width: 0.875rem; height: 0.875rem; }
 .marks-play-btn {
   width: 100%;
   margin-top: 0.5rem;
@@ -1484,6 +1504,17 @@
 }
 .pack-q-edit-btn svg { width: 0.875rem; height: 0.875rem; }
 .pack-q-edit-btn:hover, .pack-q-edit-btn:focus-visible { opacity: 1; }
+
+/* ── Shared modal layout utilities (replace one-off inline styles) ── */
+.modal-block { width: 100%; margin-top: 0.75rem; }
+.modal-form-block { margin-top: 0.75rem; }
+#newPackForm.hidden { display: none; }
+#unlockPackForm.hidden { display: none; }
+.form-group-tight { margin-bottom: 0.5rem; }
+.modal-btn-row { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+.modal-btn-row .btn { flex: 1; }
+.auth-hint-tight { margin: -0.25rem 0 0.5rem; }
+.auth-links { margin-top: 0.5rem; }
 
 /* ── Auth (web version) ── */
 .auth-sheet { max-width: min(90vw, 420px); }
@@ -1543,7 +1574,7 @@
 .account-email { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account-signout {
   display: flex; align-items: center; justify-content: center;
-  width: 1.5rem; height: 1.5rem; flex-shrink: 0;
+  width: 2rem; height: 2rem; flex-shrink: 0;
   border: none; border-radius: 50%; background: transparent;
   color: var(--ink-muted); font-size: 1rem; line-height: 1; cursor: pointer;
 }
