@@ -64,7 +64,6 @@
   let scoreEnabled = true;
   let questionsAnswered = 0;
   let rarestAnswered = null;
-  let showAllAnswered = false;
 
   /* ── Theme ── */
   function getTheme() {
@@ -127,22 +126,95 @@
     setBackground(saved || 'classic');
   }
 
-  /* ── Answered sidebar collapse (desktop only) ── */
-  function setSidebarCollapsed(collapsed) {
-    $answeredSidebar.classList.toggle('collapsed', collapsed);
-    $answeredCollapseToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-    $answeredCollapseToggle.setAttribute('aria-label', collapsed ? 'Expand answered list' : 'Collapse answered list');
-    localStorage.setItem('dt_sidebar_collapsed', collapsed ? '1' : '0');
+  /* ── Card resize (manual, drag or keyboard) ── */
+  const CARD_SCALE_MIN = 0.7;
+  const CARD_SCALE_MAX = 1.6;
+  const CARD_SCALE_STEP = 0.05;
+  let cardScale = 1;
+
+  function clampCardScale(v) {
+    return Math.min(CARD_SCALE_MAX, Math.max(CARD_SCALE_MIN, v));
   }
 
-  function toggleSidebarCollapsed() {
-    setSidebarCollapsed(!$answeredSidebar.classList.contains('collapsed'));
+  function setCardScale(v, announce) {
+    cardScale = clampCardScale(v);
+    $cardStage.style.setProperty('--card-scale', cardScale);
+    if (announce) announceStatus(`Card size ${Math.round(cardScale * 100)}%`);
   }
 
-  function loadSidebarCollapsed() {
-    if (localStorage.getItem('dt_sidebar_collapsed') === '1') {
-      setSidebarCollapsed(true);
-    }
+  function persistCardScale() {
+    localStorage.setItem('dt_card_scale', String(cardScale));
+  }
+
+  function loadCardScale() {
+    const saved = parseFloat(localStorage.getItem('dt_card_scale'));
+    setCardScale(Number.isNaN(saved) ? 1 : saved, false);
+  }
+
+  function initCardResize() {
+    let dragging = false;
+    let startX = 0;
+    let startScale = 1;
+
+    $cardResizeHandle.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      startX = e.clientX;
+      startScale = cardScale;
+      $cardResizeHandle.setPointerCapture(e.pointerId);
+    });
+
+    $cardResizeHandle.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const deltaX = e.clientX - startX;
+      setCardScale(startScale + deltaX / 300, false);
+    });
+
+    const endDrag = () => {
+      if (!dragging) return;
+      dragging = false;
+      persistCardScale();
+      announceStatus(`Card size ${Math.round(cardScale * 100)}%`);
+    };
+    $cardResizeHandle.addEventListener('pointerup', endDrag);
+    $cardResizeHandle.addEventListener('pointercancel', endDrag);
+
+    $cardResizeHandle.addEventListener('dblclick', () => {
+      setCardScale(1, true);
+      persistCardScale();
+    });
+
+    $cardResizeHandle.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === '+') {
+        e.preventDefault();
+        setCardScale(cardScale + CARD_SCALE_STEP, true);
+        persistCardScale();
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown' || e.key === '-') {
+        e.preventDefault();
+        setCardScale(cardScale - CARD_SCALE_STEP, true);
+        persistCardScale();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        setCardScale(1, true);
+        persistCardScale();
+      }
+    });
+  }
+
+  /* ── Answered history collapse ── */
+  function setHistoryCollapsed(collapsed) {
+    $answeredColumns.classList.toggle('hidden', collapsed);
+    $answeredRaritySummary.classList.toggle('hidden', !collapsed);
+    $answeredChevron.classList.toggle('open', !collapsed);
+    $answeredHistoryToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    localStorage.setItem('dt_history_collapsed', collapsed ? '1' : '0');
+  }
+
+  function toggleHistoryCollapsed() {
+    setHistoryCollapsed(!$answeredColumns.classList.contains('hidden'));
+  }
+
+  function loadHistoryCollapsed() {
+    setHistoryCollapsed(localStorage.getItem('dt_history_collapsed') === '1');
   }
 
   /* ── Question Packs (server-side) ── */
@@ -316,7 +388,6 @@
     questionsAnswered = state.questionsAnswered;
     rarestAnswered = state.rarestAnswered;
     sessionHearts = state.sessionHearts;
-    showAllAnswered = false;
     updateUI();
     renderAnsweredList();
     if (currentCard) {
@@ -930,14 +1001,12 @@
   const $gameOver     = document.getElementById('gameOver');
   const $finalScores  = document.getElementById('finalScores');
   const $resetBtn     = document.getElementById('resetBtn');
-  const $answeredMobileToggle = document.getElementById('answeredMobileToggle');
+  const $answeredHistoryToggle = document.getElementById('answeredHistoryToggle');
   const $answeredChevron = document.getElementById('answeredChevron');
-  const $answeredList = document.getElementById('answeredList');
+  const $answeredColumns = document.getElementById('answeredColumns');
+  const $answeredRaritySummary = document.getElementById('answeredRaritySummary');
   const $answeredCount = document.getElementById('answeredCount');
-  const $answeredShowAll = document.getElementById('answeredShowAll');
-  const $answeredSidebar = document.getElementById('answeredSidebar');
-  const $answeredCollapseToggle = document.getElementById('answeredCollapseToggle');
-  const $answeredCollapseCount = document.getElementById('answeredCollapseCount');
+  const $cardResizeHandle = document.getElementById('cardResizeHandle');
   const $scoreValue   = document.getElementById('scoreValue');
   const $scoreDisplay = document.getElementById('scoreDisplay');
   const $scoreToggle  = document.getElementById('scoreToggle');
@@ -1173,10 +1242,6 @@
     showEmptyState();
     hideResumePrompt();
     $gameOver.classList.add('hidden');
-    showAllAnswered = false;
-    $answeredList.classList.remove('open', 'expanded');
-    $answeredChevron.classList.remove('open');
-    $answeredMobileToggle.setAttribute('aria-expanded', 'false');
     renderAnsweredList();
     $drawBtn.focus();
     saveCurrentSession();
@@ -1381,26 +1446,39 @@
   }
 
   function renderAnsweredList() {
-    const visible = showAllAnswered ? discard : discard.slice(0, 10);
     if (discard.length === 0) {
-      $answeredList.innerHTML = '<p class="answered-empty">No questions answered yet</p>';
+      $answeredColumns.innerHTML = '<p class="answered-empty">No questions answered yet</p>';
+      $answeredRaritySummary.innerHTML = '';
     } else {
-      $answeredList.innerHTML = visible.map((q) => {
-        const r = RARITY[q.rarity];
-        return `
+      const newestFirst = [...discard].reverse();
+      const byRarity = {};
+      for (const q of newestFirst) {
+        (byRarity[q.rarity] || (byRarity[q.rarity] = [])).push(q);
+      }
+      $answeredColumns.innerHTML = Object.entries(RARITY).map(([key, r]) => {
+        const items = byRarity[key];
+        if (!items || items.length === 0) return '';
+        const itemsHTML = items.map((q) => `
           <button class="answered-item" type="button" data-qkey="${escapeAttr(q.qkey)}">
             <span class="answered-item-dot" style="background: ${r.color}"></span>
             <span class="answered-item-text" title="${escapeHTML(q.text)}">${escapeHTML(q.text)}</span>
             ${scoreEnabled ? `<span class="answered-item-score" style="color: ${r.color}">+${r.points}</span>` : ''}
           </button>
+        `).join('');
+        return `
+          <div class="answered-col">
+            <div class="answered-col-header" style="color:${r.color}">${r.label} <span class="answered-col-count">${items.length}</span></div>
+            ${itemsHTML}
+          </div>
         `;
       }).join('');
+      $answeredRaritySummary.innerHTML = Object.entries(RARITY).map(([key, r]) => {
+        const items = byRarity[key];
+        if (!items || items.length === 0) return '';
+        return `<span class="answered-pill" style="color:${r.color}"><span class="answered-item-dot" style="background:${r.color}"></span>${items.length}</span>`;
+      }).join('');
     }
-    $answeredList.classList.toggle('expanded', showAllAnswered);
     $answeredCount.textContent = discard.length;
-    $answeredCollapseCount.textContent = discard.length;
-    $answeredShowAll.classList.toggle('hidden', discard.length <= 10);
-    $answeredShowAll.textContent = showAllAnswered ? 'Show recent' : `Show all (${discard.length})`;
   }
 
   /* ── Skipped Modal ── */
@@ -1485,7 +1563,6 @@
   function updateUI() {
     $remainingCount.textContent = deck.length;
     $answeredCount.textContent = discard.length;
-    $answeredCollapseCount.textContent = discard.length;
     $skippedCount.textContent = skipped.length;
     $skippedPill.classList.toggle('hidden', skipped.length === 0);
 
@@ -1603,20 +1680,11 @@
     toggleScore($scoreToggle.checked);
   });
 
-  $answeredMobileToggle.addEventListener('click', () => {
-    const isOpen = $answeredList.classList.toggle('open');
-    $answeredChevron.classList.toggle('open', isOpen);
-    $answeredMobileToggle.setAttribute('aria-expanded', isOpen);
-  });
+  $answeredHistoryToggle.addEventListener('click', toggleHistoryCollapsed);
 
-  $answeredShowAll.addEventListener('click', () => {
-    showAllAnswered = !showAllAnswered;
-    renderAnsweredList();
-  });
+  $answeredRaritySummary.addEventListener('click', () => setHistoryCollapsed(false));
 
-  $answeredCollapseToggle.addEventListener('click', toggleSidebarCollapsed);
-
-  $answeredList.addEventListener('click', (e) => {
+  $answeredColumns.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-qkey]');
     if (!btn) return;
     unanswerCard(btn.dataset.qkey);
@@ -1947,7 +2015,9 @@
   /* ── Boot ── */
   loadTheme();
   loadBackground();
-  loadSidebarCollapsed();
+  loadHistoryCollapsed();
+  loadCardScale();
+  initCardResize();
   (async () => {
     await Promise.all([loadQuestions(), loadFeaturedPacks()]);
     await window.store.ready();

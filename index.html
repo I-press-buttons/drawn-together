@@ -29,6 +29,8 @@
   <div class="layout">
     <div class="game-column">
 
+      <h1 class="title">Drawn Together</h1>
+
       <!-- Top Bar -->
       <header class="top-bar">
         <div class="account-control hidden" id="accountControl">
@@ -38,7 +40,6 @@
             <button class="account-signout" id="signOutBtn" aria-label="Sign out" title="Sign out">&times;</button>
           </span>
         </div>
-        <h1 class="title">Drawn Together</h1>
         <div class="top-actions">
           <div class="stat" id="scoreDisplay">
             <span>Score</span>
@@ -133,6 +134,12 @@
               <button class="btn btn-ghost btn-skip" id="skipBtn">Skip</button>
               <button class="btn btn-answered" id="answeredBtn">Answered</button>
             </div>
+            <button class="card-resize-handle" id="cardResizeHandle" type="button" aria-label="Resize card" title="Drag to resize (arrow keys when focused, Enter to reset)">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+                <line x1="5" y1="15" x2="15" y2="5"/>
+                <line x1="9" y1="15" x2="15" y2="9"/>
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -153,26 +160,17 @@
         </div>
       </main>
 
-    </div>
+      <section class="answered-history" id="answeredHistory">
+        <button class="answered-history-toggle" id="answeredHistoryToggle" type="button" aria-expanded="true" aria-controls="answeredColumns">
+          <span>Answered</span>
+          <span class="stat-value" id="answeredCount">0</span>
+          <svg class="answered-chevron" id="answeredChevron" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
+        </button>
+        <div class="answered-rarity-summary hidden" id="answeredRaritySummary"></div>
+        <div class="answered-columns" id="answeredColumns" role="region" aria-label="Answered questions"></div>
+      </section>
 
-    <!-- Answered Sidebar -->
-    <aside class="answered-sidebar" id="answeredSidebar">
-      <button class="answered-collapse-toggle" id="answeredCollapseToggle" type="button" aria-expanded="true" aria-label="Collapse answered list">
-        <svg class="answered-collapse-chevron" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-          <path d="M3 5l4 4 4-4"/>
-        </svg>
-        <span class="stat-value answered-collapse-count" id="answeredCollapseCount">0</span>
-      </button>
-      <button class="answered-header" id="answeredMobileToggle" aria-expanded="false">
-        <span>Answered</span>
-        <span class="stat-value" id="answeredCount">0</span>
-        <svg class="answered-chevron" id="answeredChevron" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-          <path d="M3 5l4 4 4-4"/>
-        </svg>
-      </button>
-      <div class="answered-list" id="answeredList" role="region" aria-label="Answered questions"></div>
-      <button class="answered-show-all hidden" id="answeredShowAll" type="button">Show all</button>
-    </aside>
+    </div>
   </div>
 
   <!-- Skipped pile counter -->
