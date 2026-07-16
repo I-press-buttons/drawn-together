@@ -14,6 +14,9 @@ stdlib server — no frameworks, no build step, no pip installs.
   import packs as JSON
 - **Pack sharing** (hosted web version) — share a pack as an unlock code;
   anyone who redeems the code gets their own editable copy
+- **Featured packs** — curated packs shipped with the game (starting with
+  Biblical Marriage), shown to everyone and individually toggleable per
+  viewer
 - **Greatest hits** — heart a question mid-game and replay your favorites
   as their own round
 - **Retire questions** you never want to see again (with undo)
@@ -87,6 +90,11 @@ One-time setup:
 
 1. Create a free Supabase project and run `supabase/schema.sql` in its SQL
    editor.
+
+   Upgrading an existing deployment? Re-run the `featured_pack_prefs` table +
+   policy statements at the bottom of `supabase/schema.sql` once in the SQL
+   editor (every statement is `create … if not exists`-safe except policies —
+   skip any `create policy` that already exists).
 2. In Authentication → Sign In / Up, disable **Allow new users to sign up**
    (accounts become invite-only; invite emails from the Users page).
 3. In Authentication → URL Configuration, set the site URL to your Pages root
