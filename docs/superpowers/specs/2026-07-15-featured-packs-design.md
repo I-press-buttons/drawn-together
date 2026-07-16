@@ -25,7 +25,7 @@ New static file `featured_packs.json` at repo root, shipped alongside `questions
 ]
 ```
 
-- `key` is a stable slug, not a database id — this file is static and identical across every self-hosted instance and the public deployment, so there's no per-instance id assignment.
+- `key` is a stable slug, not a database id — this file is static and identical across every self-hosted instance and the public deployment, so there's no per-instance id assignment. Keys must be lowercase `[a-z0-9-]` starting alphanumeric (the server's mark/pref validation regexes require it), and no key may be a prefix of another key (deck-sync filters match on the `f<key>-` prefix).
 - Question qkey format: `f<key>-<id>` (e.g. `fbiblical-marriage-1`). This is a new prefix, distinct from `b<n>` (base deck) and `p<packId>-<id>` (custom packs), so favorites/retired marks against featured-pack questions never collide with either existing namespace.
 - Content in this file is never mutated by the app — no add/edit/delete/move UI for it.
 
