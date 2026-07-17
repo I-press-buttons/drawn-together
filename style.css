@@ -292,10 +292,34 @@
   }
   .empty-state.hidden { display: none; }
 
+  .pile-wrap {
+    position: relative;
+  }
+
   .deck-illustration {
     position: relative;
     width: clamp(140px, 10vw + 100px, 200px);
     height: clamp(180px, 12vw + 130px, 256px);
+    display: block;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .deck-illustration:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 4px;
+    border-radius: var(--radius-md);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .deck-illustration:hover .deck-card:nth-child(1),
+    .deck-illustration:focus-visible .deck-card:nth-child(1) {
+      transform: translateX(-50%) translateY(-6px);
+    }
+    .deck-illustration:active .deck-card:nth-child(1) {
+      transform: translateX(-50%) translateY(-2px);
+    }
   }
   .deck-card {
     position: absolute;

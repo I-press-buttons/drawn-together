@@ -82,10 +82,12 @@
       <main class="main" id="mainArea">
         <!-- Empty / Draw State -->
         <div class="empty-state" id="emptyState">
-          <div class="deck-illustration" aria-hidden="true">
-            <div class="deck-card"></div>
-            <div class="deck-card"></div>
-            <div class="deck-card"></div>
+          <div class="pile-wrap">
+            <button type="button" class="deck-illustration" id="pileBtn" aria-label="Draw a card" title="Draw a card">
+              <span class="deck-card" aria-hidden="true"></span>
+              <span class="deck-card" aria-hidden="true"></span>
+              <span class="deck-card" aria-hidden="true"></span>
+            </button>
           </div>
           <div class="draw-controls" id="drawControls">
             <p class="remaining-badge" id="remainingBadge">

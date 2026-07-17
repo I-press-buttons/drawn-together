@@ -956,6 +956,7 @@
   const $emptyState   = document.getElementById('emptyState');
   const $remainingCount = document.getElementById('remainingCount');
   const $drawBtn      = document.getElementById('drawBtn');
+  const $pileBtn      = document.getElementById('pileBtn');
   const $drawControls = document.getElementById('drawControls');
   const $resumePrompt = document.getElementById('resumePrompt');
   const $resumeText   = document.getElementById('resumeText');
@@ -1621,6 +1622,7 @@
 
   /* ── Event Listeners ── */
   $drawBtn.addEventListener('click', drawCard);
+  $pileBtn.addEventListener('click', drawCard);
   $answeredBtn.addEventListener('click', answerCard);
   $skipBtn.addEventListener('click', skipCard);
   $resetBtn.addEventListener('click', resetGame);
