@@ -41,10 +41,13 @@ New table in `supabase/schema.sql`:
 ```sql
 create table user_settings (
   user_id uuid primary key references auth.users (id) on delete cascade,
-  background text,
+  background text check (background in ('classic', 'treeline', 'lakeside', 'sunset', 'alpine')),
   updated_at timestamptz not null default now()
 );
 ```
+
+The `check` constraint is the service-side validation on this backend — an upsert with an
+unknown key fails and `setBackgroundPref` returns `false`.
 
 RLS enabled, owner-only select/insert/update/delete via `auth.uid() = user_id`, same
 pattern as the existing `sessions` table. `setBackgroundPref` upserts the row;
@@ -57,12 +60,14 @@ pattern as the existing `sessions` table. `setBackgroundPref` upserts the row;
 
 - `load_user_data()` gains a `"background"` field (string or `None`; tolerate bad types
   like the `featuredPackPrefs` field does).
+- A module-level `BACKGROUND_KEYS = {"classic", "treeline", "lakeside", "sunset",
+  "alpine"}` — the service-side validation list. (Adding a background now touches
+  `app.js`/`index.html`, `server.py`, and `supabase/schema.sql`; accepted trade-off.)
 - `GET /api/background` → `{"background": <key-or-null>}`.
-- `PUT /api/background` with body `{"background": "<key>"}` → validates it's a non-empty
-  string (server doesn't know the valid key list — the client clamps unknown keys to
-  `alpine` on read), stores under `PACKS_LOCK`, echoes `{"background": key}`.
+- `PUT /api/background` with body `{"background": "<key>"}` → 400 unless the value is in
+  `BACKGROUND_KEYS`; stores under `PACKS_LOCK`, echoes `{"background": key}`.
 - `test_server.py`: coverage for GET default (null), PUT + readback, PUT rejects
-  missing/non-string body (400).
+  missing/non-string body and unknown keys (400).
 
 ## app.js changes
 
@@ -76,7 +81,8 @@ pattern as the existing `sessions` table. `setBackgroundPref` upserts the row;
   `store.ready()`), `loadBackgroundPref()` and apply if non-null.
 - `onAuthChange`: on sign-in, `loadBackgroundPref()` and apply if non-null.
 - Unknown/invalid keys from the account are clamped by the existing
-  `hasOwnProperty` guard in `setBackground` (falls back to `alpine`).
+  `hasOwnProperty` guard in `setBackground` (falls back to `alpine`) — defense in depth
+  behind the service-side validation.
 
 ## Not doing
 
