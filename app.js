@@ -200,6 +200,80 @@
     });
   }
 
+  /* ── Pile resize (manual, drag or keyboard) ── */
+  const PILE_SCALE_MIN = 0.5;
+  const PILE_SCALE_MAX = 1.5;
+  const PILE_SCALE_STEP = 0.05;
+  let pileScale = 1;
+
+  function clampPileScale(v) {
+    return Math.min(PILE_SCALE_MAX, Math.max(PILE_SCALE_MIN, v));
+  }
+
+  function setPileScale(v, announce) {
+    pileScale = clampPileScale(v);
+    $pileBtn.style.setProperty('--pile-scale', pileScale);
+    if (announce) announceStatus(`Pile size ${Math.round(pileScale * 100)}%`);
+  }
+
+  function persistPileScale() {
+    localStorage.setItem('dt_pile_scale', String(pileScale));
+  }
+
+  function loadPileScale() {
+    const saved = parseFloat(localStorage.getItem('dt_pile_scale'));
+    setPileScale(Number.isNaN(saved) ? 1 : saved, false);
+  }
+
+  function initPileResize() {
+    let dragging = false;
+    let startX = 0;
+    let startScale = 1;
+
+    $pileResizeHandle.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      startX = e.clientX;
+      startScale = pileScale;
+      $pileResizeHandle.setPointerCapture(e.pointerId);
+    });
+
+    $pileResizeHandle.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const deltaX = e.clientX - startX;
+      setPileScale(startScale + deltaX / 300, false);
+    });
+
+    const endDrag = () => {
+      if (!dragging) return;
+      dragging = false;
+      persistPileScale();
+      announceStatus(`Pile size ${Math.round(pileScale * 100)}%`);
+    };
+    $pileResizeHandle.addEventListener('pointerup', endDrag);
+    $pileResizeHandle.addEventListener('pointercancel', endDrag);
+
+    $pileResizeHandle.addEventListener('dblclick', () => {
+      setPileScale(1, true);
+      persistPileScale();
+    });
+
+    $pileResizeHandle.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === '+') {
+        e.preventDefault();
+        setPileScale(pileScale + PILE_SCALE_STEP, true);
+        persistPileScale();
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown' || e.key === '-') {
+        e.preventDefault();
+        setPileScale(pileScale - PILE_SCALE_STEP, true);
+        persistPileScale();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        setPileScale(1, true);
+        persistPileScale();
+      }
+    });
+  }
+
   /* ── Question Packs (server-side) ── */
   let questionPacks = [];
   let packShares = {};   /* { [packId]: code } — web backend, signed in only */
@@ -992,6 +1066,7 @@
   const $answeredColumns = document.getElementById('answeredColumns');
   const $answeredCount = document.getElementById('answeredCount');
   const $cardResizeHandle = document.getElementById('cardResizeHandle');
+  const $pileResizeHandle = document.getElementById('pileResizeHandle');
   const $scoreValue   = document.getElementById('scoreValue');
   const $scoreDisplay = document.getElementById('scoreDisplay');
   const $scoreToggle  = document.getElementById('scoreToggle');
@@ -2024,6 +2099,8 @@
   loadBackground();
   loadCardScale();
   initCardResize();
+  loadPileScale();
+  initPileResize();
   (async () => {
     await Promise.all([loadQuestions(), loadFeaturedPacks()]);
     await window.store.ready();
