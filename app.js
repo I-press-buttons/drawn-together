@@ -139,7 +139,7 @@
   function setCardScale(v, announce) {
     cardScale = clampCardScale(v);
     $cardStage.style.setProperty('--card-scale', cardScale);
-    fitCardToViewport();
+    scheduleCardFit();
     if (announce) announceStatus(`Card size ${Math.round(cardScale * 100)}%`);
   }
 
@@ -222,6 +222,15 @@
       $cardStage.style.setProperty('--card-fit', fit);
       if (fit === CARD_FIT_MIN) break;
     }
+  }
+
+  let cardFitRaf = 0;
+  function scheduleCardFit() {
+    if (cardFitRaf) return;
+    cardFitRaf = requestAnimationFrame(() => {
+      cardFitRaf = 0;
+      fitCardToViewport();
+    });
   }
 
   let cardFitResizeTimer = 0;
