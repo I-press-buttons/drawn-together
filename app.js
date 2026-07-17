@@ -139,6 +139,7 @@
   function setCardScale(v, announce) {
     cardScale = clampCardScale(v);
     $cardStage.style.setProperty('--card-scale', cardScale);
+    fitCardToViewport();
     if (announce) announceStatus(`Card size ${Math.round(cardScale * 100)}%`);
   }
 
@@ -199,6 +200,35 @@
       }
     });
   }
+
+  /* ── Card fit (auto-shrink to the viewport; derived, never persisted) ── */
+  const CARD_FIT_MIN = 0.55;
+  const CARD_FIT_BOTTOM_RESERVE = 72;  /* answered pill height + 1rem inset + breathing room */
+  const CARD_FIT_TOP_GAP = 16;
+
+  function fitCardToViewport() {
+    if ($cardStage.classList.contains('hidden')) return;
+    $cardStage.style.setProperty('--card-fit', 1);
+    const topBar = document.querySelector('.top-bar');
+    const topEdge = topBar ? topBar.getBoundingClientRect().bottom : 0;
+    const available = Math.max(
+      window.innerHeight - topEdge - CARD_FIT_BOTTOM_RESERVE - CARD_FIT_TOP_GAP, 1);
+    let fit = 1;
+    /* text rewraps as the card narrows, so height responds nonlinearly — iterate to converge */
+    for (let i = 0; i < 3; i++) {
+      const height = $activeCard.getBoundingClientRect().height;
+      if (height <= available) break;
+      fit = Math.max(CARD_FIT_MIN, fit * (available / height));
+      $cardStage.style.setProperty('--card-fit', fit);
+      if (fit === CARD_FIT_MIN) break;
+    }
+  }
+
+  let cardFitResizeTimer = 0;
+  window.addEventListener('resize', () => {
+    clearTimeout(cardFitResizeTimer);
+    cardFitResizeTimer = setTimeout(fitCardToViewport, 100);
+  });
 
   /* ── Pile resize (manual, drag or keyboard) ── */
   const PILE_SCALE_MIN = 0.5;
@@ -1355,6 +1385,7 @@
     $emptyState.classList.add('hidden');
     $gameOver.classList.add('hidden');
     $cardStage.classList.remove('hidden');
+    fitCardToViewport();
   }
 
   function drawCard() {
