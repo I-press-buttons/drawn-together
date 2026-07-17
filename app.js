@@ -200,23 +200,6 @@
     });
   }
 
-  /* ── Answered history collapse ── */
-  function setHistoryCollapsed(collapsed) {
-    $answeredColumns.classList.toggle('hidden', collapsed);
-    $answeredRaritySummary.classList.toggle('hidden', !collapsed);
-    $answeredChevron.classList.toggle('open', !collapsed);
-    $answeredHistoryToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
-    localStorage.setItem('dt_history_collapsed', collapsed ? '1' : '0');
-  }
-
-  function toggleHistoryCollapsed() {
-    setHistoryCollapsed(!$answeredColumns.classList.contains('hidden'));
-  }
-
-  function loadHistoryCollapsed() {
-    setHistoryCollapsed(localStorage.getItem('dt_history_collapsed') === '1');
-  }
-
   /* ── Question Packs (server-side) ── */
   let questionPacks = [];
   let packShares = {};   /* { [packId]: code } — web backend, signed in only */
@@ -1001,10 +984,11 @@
   const $gameOver     = document.getElementById('gameOver');
   const $finalScores  = document.getElementById('finalScores');
   const $resetBtn     = document.getElementById('resetBtn');
-  const $answeredHistoryToggle = document.getElementById('answeredHistoryToggle');
-  const $answeredChevron = document.getElementById('answeredChevron');
+  const $answeredPill = document.getElementById('answeredPill');
+  const $answeredPillCount = document.getElementById('answeredPillCount');
+  const $answeredModalOverlay = document.getElementById('answeredModalOverlay');
+  const $answeredModalClose = document.getElementById('answeredModalClose');
   const $answeredColumns = document.getElementById('answeredColumns');
-  const $answeredRaritySummary = document.getElementById('answeredRaritySummary');
   const $answeredCount = document.getElementById('answeredCount');
   const $cardResizeHandle = document.getElementById('cardResizeHandle');
   const $scoreValue   = document.getElementById('scoreValue');
@@ -1448,7 +1432,6 @@
   function renderAnsweredList() {
     if (discard.length === 0) {
       $answeredColumns.innerHTML = '<p class="answered-empty">No questions answered yet</p>';
-      $answeredRaritySummary.innerHTML = '';
     } else {
       const newestFirst = [...discard].reverse();
       const byRarity = {};
@@ -1472,13 +1455,9 @@
           </div>
         `;
       }).join('');
-      $answeredRaritySummary.innerHTML = Object.entries(RARITY).map(([key, r]) => {
-        const items = byRarity[key];
-        if (!items || items.length === 0) return '';
-        return `<span class="answered-pill" style="color:${r.color}"><span class="answered-item-dot" style="background:${r.color}"></span>${items.length}</span>`;
-      }).join('');
     }
     $answeredCount.textContent = discard.length;
+    $answeredPillCount.textContent = discard.length;
   }
 
   /* ── Skipped Modal ── */
@@ -1505,6 +1484,15 @@
 
   function closeSkippedModal() {
     closeOverlay($skippedModalOverlay);
+  }
+
+  function openAnsweredModal() {
+    renderAnsweredList();
+    openOverlay($answeredModalOverlay);
+  }
+
+  function closeAnsweredModal() {
+    closeOverlay($answeredModalOverlay);
   }
 
   function openBgModal() {
@@ -1555,6 +1543,7 @@
     currentCard = card;
     renderCard();
     showCard();
+    closeAnsweredModal();
     updateUI();
     renderAnsweredList();
     saveCurrentSession();
@@ -1563,6 +1552,8 @@
   function updateUI() {
     $remainingCount.textContent = deck.length;
     $answeredCount.textContent = discard.length;
+    $answeredPillCount.textContent = discard.length;
+    $answeredPill.classList.toggle('hidden', discard.length === 0);
     $skippedCount.textContent = skipped.length;
     $skippedPill.classList.toggle('hidden', skipped.length === 0);
 
@@ -1680,10 +1671,6 @@
     toggleScore($scoreToggle.checked);
   });
 
-  $answeredHistoryToggle.addEventListener('click', toggleHistoryCollapsed);
-
-  $answeredRaritySummary.addEventListener('click', () => setHistoryCollapsed(false));
-
   $answeredColumns.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-qkey]');
     if (!btn) return;
@@ -1706,6 +1693,13 @@
   $skippedModalClose.addEventListener('click', closeSkippedModal);
   $skippedModalOverlay.addEventListener('click', (e) => {
     if (e.target === $skippedModalOverlay) closeSkippedModal();
+  });
+
+  /* ── Answered Pile Event Listeners ── */
+  $answeredPill.addEventListener('click', openAnsweredModal);
+  $answeredModalClose.addEventListener('click', closeAnsweredModal);
+  $answeredModalOverlay.addEventListener('click', (e) => {
+    if (e.target === $answeredModalOverlay) closeAnsweredModal();
   });
 
   $bgBtn.addEventListener('click', openBgModal);
@@ -1951,6 +1945,11 @@
 
   /* Keyboard shortcut: Escape closes modal */
   document.addEventListener('keydown', (e) => {
+    /* An Escape that dismisses an overlay is consumed here — it must not
+       also reach the game-shortcut listener below and skip the active card */
+    if (e.key === 'Escape' && document.querySelector('.modal-overlay.open')) {
+      e.stopImmediatePropagation();
+    }
     if (e.key === 'Escape' && $modalOverlay.classList.contains('open')) {
       closeModal();
     }
@@ -1959,6 +1958,9 @@
     }
     if (e.key === 'Escape' && $skippedModalOverlay.classList.contains('open')) {
       closeSkippedModal();
+    }
+    if (e.key === 'Escape' && $answeredModalOverlay.classList.contains('open')) {
+      closeAnsweredModal();
     }
     if (e.key === 'Escape' && $bgModalOverlay.classList.contains('open')) {
       closeBgModal();
@@ -1975,6 +1977,9 @@
     /* Never hijack keys while the user is typing in a form field */
     const t = e.target;
     if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) return;
+    /* Nor while a modal is open — Escape/arrows there must not skip or answer
+       the card sitting underneath it */
+    if (document.querySelector('.modal-overlay.open')) return;
     if (e.key === ' ' || e.key === 'Enter') {
       if (document.activeElement === $drawBtn) {
         e.preventDefault();
@@ -2015,7 +2020,6 @@
   /* ── Boot ── */
   loadTheme();
   loadBackground();
-  loadHistoryCollapsed();
   loadCardScale();
   initCardResize();
   (async () => {

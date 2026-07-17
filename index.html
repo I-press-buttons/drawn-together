@@ -160,23 +160,18 @@
         </div>
       </main>
 
-      <section class="answered-history" id="answeredHistory">
-        <button class="answered-history-toggle" id="answeredHistoryToggle" type="button" aria-expanded="true" aria-controls="answeredColumns">
-          <span>Answered</span>
-          <span class="stat-value" id="answeredCount">0</span>
-          <svg class="answered-chevron" id="answeredChevron" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 5l4 4 4-4"/></svg>
-        </button>
-        <div class="answered-rarity-summary hidden" id="answeredRaritySummary"></div>
-        <div class="answered-columns" id="answeredColumns" role="region" aria-label="Answered questions"></div>
-      </section>
-
     </div>
   </div>
 
-  <!-- Skipped pile counter -->
-  <button class="skipped-pill hidden" id="skippedPill" type="button" title="View skipped questions">
-    Skipped <span id="skippedCount">0</span>
-  </button>
+  <!-- Corner pills -->
+  <div class="corner-pills">
+    <button class="corner-pill hidden" id="answeredPill" type="button" title="View answered questions">
+      Answered <span id="answeredPillCount">0</span>
+    </button>
+    <button class="corner-pill hidden" id="skippedPill" type="button" title="View skipped questions">
+      Skipped <span id="skippedCount">0</span>
+    </button>
+  </div>
 
   <!-- Question Packs Modal -->
   <div class="modal-overlay" id="modalOverlay">
@@ -224,6 +219,18 @@
         <button class="btn btn-ghost" id="importPacksBtn">Import packs</button>
         <input type="file" id="importPacksFile" accept=".json,application/json" hidden>
       </div>
+    </div>
+  </div>
+
+  <!-- Answered Modal -->
+  <div class="modal-overlay" id="answeredModalOverlay">
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="answeredModalTitle">
+      <div class="modal-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <h2 class="modal-title" id="answeredModalTitle">Answered <span class="stat-value" id="answeredCount">0</span></h2>
+        <button class="modal-close" id="answeredModalClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="answered-columns" id="answeredColumns" role="region" aria-label="Answered questions"></div>
     </div>
   </div>
 
