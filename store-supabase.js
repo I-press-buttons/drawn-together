@@ -197,6 +197,18 @@
         .upsert({ pack_key: key, enabled });
       return error ? null : this.loadFeaturedPackPrefs();
     },
+    async loadBackgroundPref() {
+      if (!session) return null;
+      const { data, error } = await client.from('user_settings')
+        .select('background').eq('user_id', session.user.id).maybeSingle();
+      return (error || !data) ? null : data.background;
+    },
+    async setBackgroundPref(key) {
+      if (!session) return false;
+      const { error } = await client.from('user_settings')
+        .upsert({ user_id: session.user.id, background: key, updated_at: new Date().toISOString() });
+      return !error;
+    },
 
     ready() { return readyPromise; },
     signedIn() { return !!session; },

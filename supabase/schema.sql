@@ -128,3 +128,14 @@ alter table public.featured_pack_prefs enable row level security;
 
 create policy "own featured prefs" on public.featured_pack_prefs
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+create table if not exists public.user_settings (
+  user_id uuid primary key default auth.uid() references auth.users(id) on delete cascade,
+  background text check (background in ('classic','treeline','lakeside','sunset','alpine')),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.user_settings enable row level security;
+
+create policy "own settings" on public.user_settings
+  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
