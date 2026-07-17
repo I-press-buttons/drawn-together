@@ -299,7 +299,7 @@
   .deck-illustration {
     position: relative;
     /* one size driver: preferred height, capped so the pile shrinks with the window */
-    --pile-h: calc(min(clamp(360px, 24vw + 260px, 512px), 100vh - 340px, 90vw) * var(--pile-scale, 1));
+    --pile-h: calc(min(clamp(360px, 24vw + 260px, 512px), max(140px, 100vh - 340px), 90vw) * var(--pile-scale, 1));
     width: calc(var(--pile-h) * 0.78125);   /* 400/512 */
     height: var(--pile-h);
     display: block;
