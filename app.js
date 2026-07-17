@@ -103,7 +103,7 @@
   };
 
   function setBackground(key) {
-    if (!Object.prototype.hasOwnProperty.call(BACKGROUNDS, key)) key = 'classic';
+    if (!Object.prototype.hasOwnProperty.call(BACKGROUNDS, key)) key = 'alpine';
     const url = BACKGROUNDS[key];
     if (url) {
       $photoBg.style.backgroundImage = `url('${url}')`;
@@ -123,7 +123,7 @@
 
   function loadBackground() {
     const saved = localStorage.getItem('dt-background');
-    setBackground(saved || 'classic');
+    setBackground(saved || 'alpine');
   }
 
   /* ── Card resize (manual, drag or keyboard) ── */
