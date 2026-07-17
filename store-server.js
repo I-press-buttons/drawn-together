@@ -98,6 +98,21 @@
         return json(res);
       } catch (e) { return null; }
     },
+    async loadBackgroundPref() {
+      try {
+        const data = await json(await fetch('/api/background'));
+        return data ? data.background : null;
+      } catch (e) { return null; }
+    },
+    async setBackgroundPref(key) {
+      try {
+        const res = await fetch('/api/background', {
+          method: 'PUT', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ background: key }),
+        });
+        return res.ok;
+      } catch (e) { return false; }
+    },
 
     /* Sharing is not available on the local server. */
     async loadShares() { return {}; },
