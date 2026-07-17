@@ -298,8 +298,10 @@
 
   .deck-illustration {
     position: relative;
-    width: calc(clamp(280px, 20vw + 200px, 400px) * var(--pile-scale, 1));
-    height: calc(clamp(360px, 24vw + 260px, 512px) * var(--pile-scale, 1));
+    /* one size driver: preferred height, capped so the pile shrinks with the window */
+    --pile-h: calc(min(clamp(360px, 24vw + 260px, 512px), 100vh - 340px, 90vw) * var(--pile-scale, 1));
+    width: calc(var(--pile-h) * 0.78125);   /* 400/512 */
+    height: var(--pile-h);
     display: block;
     background: none;
     border: none;
@@ -323,8 +325,8 @@
   }
   .deck-card {
     position: absolute;
-    width: calc(clamp(240px, 18vw + 168px, 344px) * var(--pile-scale, 1));
-    height: calc(clamp(336px, 24vw + 236px, 480px) * var(--pile-scale, 1));
+    width: calc(var(--pile-h) * 0.671875);  /* 344/512 */
+    height: calc(var(--pile-h) * 0.9375);   /* 480/512 */
     border-radius: var(--radius-md);
     background: var(--surface);
     border: 1px solid var(--card-border);
@@ -333,8 +335,8 @@
     transition: transform 0.4s var(--ease-out-expo);
   }
   .deck-card:nth-child(1) { top: 0;  z-index: 3; }
-  .deck-card:nth-child(2) { top: 12px; z-index: 2; transform: translateX(-50%) rotate(-2deg); }
-  .deck-card:nth-child(3) { top: 24px; z-index: 1; transform: translateX(-50%) rotate(3deg); }
+  .deck-card:nth-child(2) { top: calc(var(--pile-h) * 0.0234); z-index: 2; transform: translateX(-50%) rotate(-2deg); }
+  .deck-card:nth-child(3) { top: calc(var(--pile-h) * 0.0469); z-index: 1; transform: translateX(-50%) rotate(3deg); }
 
   .remaining-badge {
     font-size: 0.8125rem;
