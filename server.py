@@ -25,6 +25,8 @@ PACKS_LOCK = threading.Lock()
 MARK_LISTS = ("favorites", "retired")
 MARK_KEY_RE = re.compile(r"^(b\d+|p\d+-\d+|f[a-z0-9][a-z0-9-]*-\d+)$")
 
+BACKGROUND_KEYS = {"classic", "treeline", "lakeside", "sunset", "alpine"}
+
 # Shipped featured-pack content lives next to server.py (static, read-only),
 # not in DATA_DIR — it's code, not user data. Tests point this elsewhere.
 FEATURED_PACKS_FILE = Path(__file__).parent / "featured_packs.json"
@@ -64,6 +66,8 @@ def load_user_data():
     data["session"] = raw.get("session")
     prefs = raw.get("featuredPackPrefs", {})
     data["featuredPackPrefs"] = dict(prefs) if isinstance(prefs, dict) else {}
+    bg = raw.get("background")
+    data["background"] = bg if isinstance(bg, str) else None
     return data
 
 
@@ -171,6 +175,11 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
         # ── Featured pack prefs (per-viewer on/off) ──
         if self.path == "/api/featured-pack-prefs":
             json_response(self, load_user_data()["featuredPackPrefs"])
+            return
+
+        # ── Background pref ──
+        if self.path == "/api/background":
+            json_response(self, {"background": load_user_data()["background"]})
             return
 
         # ── Saved session (resume) ──
@@ -390,6 +399,26 @@ class GameHandler(http.server.SimpleHTTPRequestHandler):
                 data["featuredPackPrefs"][key] = body["enabled"]
                 save_user_data(data)
             json_response(self, data["featuredPackPrefs"])
+            return
+
+        # ── Set the background pref ──
+        if self.path == "/api/background":
+            body = read_json_body(self)
+            if body is None:
+                return
+            key = body.get("background") if isinstance(body, dict) else None
+            if not isinstance(key, str) or key not in BACKGROUND_KEYS:
+                json_response(
+                    self,
+                    {"error": "background must be one of: " + ", ".join(sorted(BACKGROUND_KEYS))},
+                    400,
+                )
+                return
+            with PACKS_LOCK:
+                data = load_user_data()
+                data["background"] = key
+                save_user_data(data)
+            json_response(self, {"background": key})
             return
 
         json_response(self, {"error": "Not found"}, 404)

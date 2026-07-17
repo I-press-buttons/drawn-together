@@ -568,6 +568,34 @@ class PackAPITest(unittest.TestCase):
         ids = [p["id"] for p in packs]
         self.assertEqual(len(set(ids)), 10, f"duplicate ids: {ids}")
 
+    # ── Background pref ──
+
+    def test_background_default_null(self):
+        status, data = self.request("GET", "/api/background")
+        self.assertEqual(status, 200)
+        self.assertIsNone(data["background"])
+
+    def test_set_background_and_read_back(self):
+        status, data = self.request("PUT", "/api/background", {"background": "sunset"})
+        self.assertEqual(status, 200)
+        self.assertEqual(data["background"], "sunset")
+        status, data = self.request("GET", "/api/background")
+        self.assertEqual(status, 200)
+        self.assertEqual(data["background"], "sunset")
+
+    def test_set_background_unknown_key_400(self):
+        status, err = self.request("PUT", "/api/background", {"background": "hawaii"})
+        self.assertEqual(status, 400)
+        self.assertIn("error", err)
+
+    def test_set_background_bad_body_400(self):
+        status, err = self.request("PUT", "/api/background", {"nope": True})
+        self.assertEqual(status, 400)
+        self.assertIn("error", err)
+        status, err = self.request("PUT", "/api/background", {"background": 7})
+        self.assertEqual(status, 400)
+        self.assertIn("error", err)
+
 
 if __name__ == "__main__":
     unittest.main()
