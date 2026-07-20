@@ -102,7 +102,7 @@
     alpine: 'backgrounds/alpine.jpg',
   };
 
-  function setBackground(key) {
+  function setBackground(key, skipSync) {
     if (!Object.prototype.hasOwnProperty.call(BACKGROUNDS, key)) key = 'alpine';
     const url = BACKGROUNDS[key];
     if (url) {
@@ -119,11 +119,22 @@
       opt.tabIndex = isSelected ? 0 : -1;
     });
     localStorage.setItem('dt-background', key);
+    /* Explicit picks sync to the account; applying a stored/account value must not
+       echo a write back (skipSync) — that would write on every page load. */
+    if (!skipSync) window.store.setBackgroundPref(key).catch(() => {});
   }
 
   function loadBackground() {
     const saved = localStorage.getItem('dt-background');
-    setBackground(saved || 'alpine');
+    setBackground(saved || 'alpine', true);
+  }
+
+  /* Account value wins when present; local value stays otherwise. */
+  async function syncBackgroundFromAccount() {
+    try {
+      const pref = await window.store.loadBackgroundPref();
+      if (pref) setBackground(pref, true);
+    } catch (e) { /* offline or signed out — keep local */ }
   }
 
   /* ── Card resize (manual, drag or keyboard) ── */
@@ -1886,6 +1897,7 @@
   }
   window.store.onAuthChange(updateAuthUI);
   window.store.onAuthChange((event) => {
+    if (event === 'SIGNED_IN') syncBackgroundFromAccount();
     if (event === 'PASSWORD_RECOVERY') {
       closeOverlay($authOverlay);
       openOverlay($resetPasswordOverlay);
@@ -2155,6 +2167,7 @@
        control's visible state directly here so an already-signed-in reload
        doesn't leave it stuck in its default hidden markup. */
     syncAccountUI();
+    syncBackgroundFromAccount();
     await Promise.all([loadPacks(), loadMarks(), loadFeaturedPrefs()]);
     await tryResumeOrStart();
     toggleScore(true);
