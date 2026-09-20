@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "drawn-together-keepalive",
+  "main": "src/index.js",
+  "compatibility_date": "2025-09-01",
+  "observability": { "enabled": true },
+  // 06:17 UTC daily — an odd minute avoids the on-the-hour scheduling crush.
+  "triggers": { "crons": ["17 6 * * *"] }
+}
