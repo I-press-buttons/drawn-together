@@ -1,6 +1,10 @@
+// The live Worker was created in the Cloudflare dashboard under this name;
+// keep it in sync or `wrangler deploy` will create a second Worker instead of
+// updating it. See README.md — the deployed copy is dashboard-managed, so
+// edits to src/index.js do not reach it until someone deploys.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "drawn-together-keepalive",
+  "name": "right-of-way-ping",
   "main": "src/index.js",
   "compatibility_date": "2025-09-01",
   "observability": { "enabled": true },

@@ -45,3 +45,19 @@ config. Never put a service-role key here.
 
 Workers Free allows cron triggers and 100k requests/day; one request a day is
 free indefinitely.
+
+## Current deployment
+
+The live Worker is **`right-of-way-ping`**, created through the Cloudflare
+dashboard (Workers & Pages → the Worker → Settings → Trigger events) rather
+than with `wrangler`. `wrangler.jsonc` carries that same name so a later
+`wrangler deploy` adopts the existing Worker instead of creating a second one.
+
+Because it is dashboard-managed, **editing `src/index.js` here does not change
+what runs.** Either paste the new source into the dashboard editor, or run
+`npx wrangler deploy` once to move the Worker under wrangler's control.
+
+Verified end to end on 2026-09-20: a manual request to the Worker's URL
+returned `{"ok": true, ... "status": 200}`, and the matching
+`GET /rest/v1/packs?select=id&limit=1` → 200 appeared in the Supabase project's
+edge logs from a Cloudflare egress IP.
