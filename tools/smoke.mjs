@@ -58,5 +58,43 @@ await page.waitForFunction(() =>
 const marks = await page.evaluate(() => window.store.loadMarks());
 if (marks.favorites.length !== 1) fail('favorite not persisted');
 
+// 5. Round setup: filters narrow the deck the next round deals
+await page.click('#modalClose');
+await page.click('#roundSetupBtn');
+await page.waitForSelector('#roundSetupOverlay.open');
+await page.click('#roundRarityChips [data-rarity="epic"]');
+await page.click('#roundLengthChips [data-length="10"]');
+if ((await page.textContent('#roundSetupCount')) !== '10 cards in this round') {
+  fail('round setup count did not follow the filters');
+}
+await page.click('#roundSetupStartBtn');
+await page.waitForSelector('#roundSetupOverlay.open', { state: 'hidden' });
+await page.waitForFunction(() =>
+  document.querySelector('#remainingCount').textContent === '10');
+if (await page.isHidden('#roundFilterSummary')) fail('round filter summary not shown');
+await page.click('#drawBtn');
+await page.waitForSelector('#cardStage:not(.hidden)');
+const rarity = (await page.textContent('#rarityLabel')).trim();
+if (!['Epic', 'Legendary', 'Mythic'].includes(rarity)) {
+  fail(`drew a ${rarity} card under an Epic+ floor`);
+}
+
+// 5b. An impossible combination blocks the start rather than dealing nothing
+await page.click('#answeredBtn');        // setup lives on the empty state, between cards
+await page.waitForSelector('#emptyState:not(.hidden)');
+await page.click('#roundSetupBtn');
+await page.waitForSelector('#roundSetupOverlay.open');
+await page.click('#roundLengthChips [data-length="0"]');
+await page.click('#roundCategoryChips [data-category="Faith"]');
+await page.click('#roundCategoryChips [data-category="General"]');
+await page.click('#roundRarityChips [data-rarity="mythic"]');       // Future Us has no mythics
+if (!(await page.isDisabled('#roundSetupStartBtn'))) fail('start enabled with an empty deck');
+
+// 5c. Chips are rebuilt on every change — keyboard focus must survive it
+await page.focus('#roundRarityChips [data-rarity="rare"]');
+await page.keyboard.press('Enter');
+const focused = await page.evaluate(() => document.activeElement.dataset.rarity);
+if (focused !== 'rare') fail(`chip lost focus on toggle (activeElement: ${focused})`);
+
 await browser.close();
 console.log('SMOKE PASS');

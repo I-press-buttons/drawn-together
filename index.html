@@ -96,12 +96,16 @@
             </button>
           </div>
           <div class="draw-controls" id="drawControls">
-            <p class="remaining-badge" id="remainingBadge">
-              <strong id="remainingCount">108</strong> questions in the deck
-            </p>
+            <div class="deck-meta">
+              <p class="remaining-badge" id="remainingBadge">
+                <strong id="remainingCount">108</strong> questions in the deck
+              </p>
+              <p class="round-filter-summary hidden" id="roundFilterSummary"></p>
+            </div>
             <button class="btn btn-primary" id="drawBtn" autofocus>
               Draw a Card
             </button>
+            <button class="btn btn-ghost btn-small round-setup-btn" id="roundSetupBtn" type="button">Round setup</button>
           </div>
 
           <div class="resume-prompt hidden" id="resumePrompt">
@@ -256,6 +260,44 @@
       <button class="btn btn-ghost modal-block" id="skippedShuffleAllBtn">
         Shuffle all back into deck
       </button>
+    </div>
+  </div>
+
+  <!-- Round Setup Modal -->
+  <div class="modal-overlay" id="roundSetupOverlay">
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="roundSetupTitle">
+      <div class="modal-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <h2 class="modal-title" id="roundSetupTitle">Round setup</h2>
+        <button class="modal-close" id="roundSetupClose" aria-label="Close">&times;</button>
+      </div>
+
+      <p class="round-setup-intro">Shape the deck before you deal it. Leave it be for the full shuffle.</p>
+
+      <div class="round-setup-section hidden" id="roundCategorySection">
+        <h3 class="round-setup-label" id="roundCategoryLabel">Topics</h3>
+        <div class="round-chip-row" id="roundCategoryChips" role="group" aria-labelledby="roundCategoryLabel"></div>
+      </div>
+
+      <div class="round-setup-section">
+        <h3 class="round-setup-label" id="roundRarityLabel">Depth</h3>
+        <div class="round-chip-row" id="roundRarityChips" role="radiogroup" aria-labelledby="roundRarityLabel"></div>
+      </div>
+
+      <div class="round-setup-section">
+        <h3 class="round-setup-label" id="roundLengthLabel">Round length</h3>
+        <div class="round-chip-row" id="roundLengthChips" role="radiogroup" aria-labelledby="roundLengthLabel"></div>
+      </div>
+
+      <div class="round-setup-status" role="status" aria-live="polite">
+        <p class="round-setup-count" id="roundSetupCount"></p>
+        <p class="round-setup-warning hidden" id="roundSetupWarning"></p>
+      </div>
+
+      <div class="modal-btn-row">
+        <button class="btn btn-ghost" id="roundSetupResetBtn" type="button">Reset</button>
+        <button class="btn btn-primary" id="roundSetupStartBtn" type="button">Start round</button>
+      </div>
     </div>
   </div>
 
