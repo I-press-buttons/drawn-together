@@ -17,11 +17,11 @@ const TARGETS = [
     key: 'sb_publishable_PK351PhseJSGE7C9WMeF2w_szz10snZ',
   },
   {
-    /* Every table here has RLS on with no known anon select policy, so a table
-       read could answer 401/403 and read as a failure. The REST root returns
-       the OpenAPI spec for any valid key, independent of RLS. */
+    /* The REST root answers 401 on this project, so ping a table instead:
+       public.runs has a SELECT policy for {anon,authenticated} with a `true`
+       qualifier, so an anon read is a plain 200. */
     name: 'right-of-way',
-    url: 'https://gsvedzfqwdpsaypqwhgw.supabase.co/rest/v1/',
+    url: 'https://gsvedzfqwdpsaypqwhgw.supabase.co/rest/v1/runs?select=id&limit=1',
     key: 'sb_publishable_qGiM6xE37A3X8WKqxOLdRA_K9K0CyMX',
   },
 ];
