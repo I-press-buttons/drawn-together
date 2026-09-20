@@ -16,6 +16,14 @@ const TARGETS = [
     url: 'https://wajjncluitygfatocbba.supabase.co/rest/v1/packs?select=id&limit=1',
     key: 'sb_publishable_PK351PhseJSGE7C9WMeF2w_szz10snZ',
   },
+  {
+    /* Every table here has RLS on with no known anon select policy, so a table
+       read could answer 401/403 and read as a failure. The REST root returns
+       the OpenAPI spec for any valid key, independent of RLS. */
+    name: 'right-of-way',
+    url: 'https://gsvedzfqwdpsaypqwhgw.supabase.co/rest/v1/',
+    key: 'sb_publishable_qGiM6xE37A3X8WKqxOLdRA_K9K0CyMX',
+  },
 ];
 
 async function ping(target) {
