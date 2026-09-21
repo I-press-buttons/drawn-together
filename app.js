@@ -453,6 +453,85 @@
     return all.filter(q => !isRetired(q.qkey));
   }
 
+  /* ── Round filters ──
+     Shape the deck before it's dealt: topics, a rarity floor and a card cap.
+     Purely client-side and per-device (like theme and card scale) — a saved
+     session stores the cards it dealt, so resume never needs the filters. */
+  const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+  const ROUND_LENGTHS = [10, 20, 30, 0];   /* 0 = the whole filtered pool */
+  const ROUND_FILTER_DEFAULTS = { categories: [], minRarity: 'common', limit: 0 };
+  /* categories: [] means every topic — an explicit list only ever narrows */
+  let roundFilters = { ...ROUND_FILTER_DEFAULTS };
+
+  function loadRoundFilters() {
+    try {
+      const raw = JSON.parse(localStorage.getItem('dt_round_filters') || 'null');
+      if (raw) roundFilters = normalizeRoundFilters(raw);
+    } catch (e) { /* unparseable — keep the defaults */ }
+  }
+
+  /* Tolerate anything: stale shapes, hand-edited storage, dropped packs. */
+  function normalizeRoundFilters(raw) {
+    const cats = Array.isArray(raw.categories) ? raw.categories.filter(c => typeof c === 'string') : [];
+    return {
+      categories: cats,
+      minRarity: RARITY_ORDER.includes(raw.minRarity) ? raw.minRarity : 'common',
+      limit: ROUND_LENGTHS.includes(raw.limit) ? raw.limit : 0,
+    };
+  }
+
+  function persistRoundFilters() {
+    try {
+      localStorage.setItem('dt_round_filters', JSON.stringify(roundFilters));
+    } catch (e) { /* private mode / full quota — filters just won't persist */ }
+  }
+
+  function roundFiltersActive(f) {
+    return f.categories.length > 0 || f.minRarity !== 'common' || f.limit !== 0;
+  }
+
+  /* Topics present in the live pool, in a stable display order. */
+  function availableCategories() {
+    return [...new Set(getAllQuestions().map(q => q.category).filter(Boolean))].sort();
+  }
+
+  /* Rarity floor + topic narrowing. buildFilteredDeck applies the card cap
+     after a shuffle, so a short round is a random sample of what's left. */
+  function filterForRound(list, f) {
+    const floor = RARITY_ORDER.indexOf(f.minRarity);
+    return list.filter(q =>
+      RARITY_ORDER.indexOf(q.rarity) >= floor
+      && (f.categories.length === 0 || f.categories.includes(q.category)));
+  }
+
+  /* How many cards a round built with these filters would actually hold. */
+  function roundDeckSize(f) {
+    const pool = filterForRound(getAllQuestions(), f).length;
+    return f.limit > 0 ? Math.min(pool, f.limit) : pool;
+  }
+
+  function describeRoundFilters(f) {
+    const parts = [];
+    if (f.categories.length > 0) {
+      parts.push(f.categories.length === 1 ? f.categories[0] : `${f.categories.length} topics`);
+    }
+    if (f.minRarity !== 'common') parts.push(rarityFloorLabel(f.minRarity));
+    if (f.limit > 0) parts.push(`${f.limit} cards`);
+    return parts.join(' · ');
+  }
+
+  function rarityFloorLabel(rarity) {
+    const last = RARITY_ORDER[RARITY_ORDER.length - 1];
+    return rarity === last ? `${RARITY[rarity].label} only` : `${RARITY[rarity].label} & up`;
+  }
+
+  function updateRoundSummary() {
+    if (!$roundFilterSummary) return;
+    const active = roundFiltersActive(roundFilters);
+    $roundFilterSummary.classList.toggle('hidden', !active);
+    if (active) $roundFilterSummary.textContent = describeRoundFilters(roundFilters);
+  }
+
   /* ── Session (resume) ── */
   function serializeSession() {
     return {
@@ -551,7 +630,7 @@
 
   function getFocusableIn(sheet) {
     return [...sheet.querySelectorAll(FOCUSABLE_SELECTOR)]
-      .filter(el => el.offsetParent !== null || el === sheet);
+      .filter(el => !el.disabled && (el.offsetParent !== null || el === sheet));
   }
 
   function openOverlay(overlayEl) {
@@ -1126,6 +1205,18 @@
   const $mountains    = document.getElementById('mountainsBg');
   const $photoBg      = document.getElementById('photoBg');
   const $bgBtn        = document.getElementById('bgBtn');
+  const $roundSetupOverlay = document.getElementById('roundSetupOverlay');
+  const $roundSetupBtn = document.getElementById('roundSetupBtn');
+  const $roundSetupClose = document.getElementById('roundSetupClose');
+  const $roundCategorySection = document.getElementById('roundCategorySection');
+  const $roundCategoryChips = document.getElementById('roundCategoryChips');
+  const $roundRarityChips = document.getElementById('roundRarityChips');
+  const $roundLengthChips = document.getElementById('roundLengthChips');
+  const $roundSetupCount = document.getElementById('roundSetupCount');
+  const $roundSetupWarning = document.getElementById('roundSetupWarning');
+  const $roundSetupResetBtn = document.getElementById('roundSetupResetBtn');
+  const $roundSetupStartBtn = document.getElementById('roundSetupStartBtn');
+  const $roundFilterSummary = document.getElementById('roundFilterSummary');
   const $bgModalOverlay = document.getElementById('bgModalOverlay');
   const $bgModalClose = document.getElementById('bgModalClose');
   const $bgOptionList = document.getElementById('bgOptionList');
@@ -1338,9 +1429,26 @@
     saveCurrentSession();
   }
 
+  /* The deck a fresh round deals: everything the round filters allow, capped
+     to the chosen length. If the filters have been narrowed to nothing (a
+     topic's pack was disabled, its questions retired), fall back to the full
+     pool rather than handing back an undealable deck. */
+  function buildFilteredDeck() {
+    const all = getAllQuestions();
+    const filtered = filterForRound(all, roundFilters);
+    if (filtered.length === 0 && all.length > 0) {
+      roundFilters = { ...ROUND_FILTER_DEFAULTS };
+      persistRoundFilters();
+      updateRoundSummary();
+      showToast('No cards matched your round setup — playing the full deck');
+      return all;
+    }
+    return roundFilters.limit > 0 ? shuffle(filtered).slice(0, roundFilters.limit) : filtered;
+  }
+
   function resetGame(customDeck) {
     /* Array.isArray guard: resetGame doubles as a click handler, which passes a MouseEvent */
-    deck = shuffle(Array.isArray(customDeck) ? customDeck : getAllQuestions());
+    deck = shuffle(Array.isArray(customDeck) ? customDeck : buildFilteredDeck());
     discard = [];
     skipped = [];
     currentCard = null;
@@ -1622,6 +1730,106 @@
     closeOverlay($answeredModalOverlay);
   }
 
+  /* ── Round setup sheet ──
+     Edits a draft; nothing touches the live game until "Start round". */
+  let roundDraft = null;
+
+  function openRoundSetup() {
+    roundDraft = { ...roundFilters, categories: [...roundFilters.categories] };
+    renderRoundSetup();
+    openOverlay($roundSetupOverlay);
+  }
+
+  function closeRoundSetup() {
+    roundDraft = null;
+    closeOverlay($roundSetupOverlay);
+  }
+
+  function renderRoundSetup() {
+    if (!roundDraft) return;
+    const cats = availableCategories();
+    /* Every chip is rewritten below, which would drop focus mid-keyboard-use
+       (and break the sheet's Tab trap) — remember which chip held it. */
+    const refocus = chipSelectorFor(document.activeElement);
+
+    /* One topic is no choice at all — hide the row rather than show a
+       checkbox that can only be on. */
+    $roundCategorySection.classList.toggle('hidden', cats.length < 2);
+    $roundCategoryChips.innerHTML = cats.map(c => {
+      const on = roundDraft.categories.length === 0 || roundDraft.categories.includes(c);
+      return `<button type="button" class="round-chip${on ? ' active' : ''}" data-category="${escapeAttr(c)}"
+        aria-pressed="${on ? 'true' : 'false'}">${escapeHTML(c)}</button>`;
+    }).join('');
+
+    $roundRarityChips.innerHTML = RARITY_ORDER.map(r => {
+      const on = roundDraft.minRarity === r;
+      return `<button type="button" role="radio" class="round-chip${on ? ' active' : ''}" data-rarity="${r}"
+        aria-checked="${on ? 'true' : 'false'}" tabindex="${on ? '0' : '-1'}"
+        style="--chip-accent: ${RARITY[r].color}">${escapeHTML(rarityFloorLabel(r))}</button>`;
+    }).join('');
+
+    $roundLengthChips.innerHTML = ROUND_LENGTHS.map(n => {
+      const on = roundDraft.limit === n;
+      return `<button type="button" role="radio" class="round-chip${on ? ' active' : ''}" data-length="${n}"
+        aria-checked="${on ? 'true' : 'false'}" tabindex="${on ? '0' : '-1'}">${n === 0 ? 'Everything' : n + ' cards'}</button>`;
+    }).join('');
+
+    const size = roundDeckSize(roundDraft);
+    $roundSetupCount.textContent = size === 1 ? '1 card in this round' : `${size} cards in this round`;
+
+    /* Two things worth saying out loud, blocking one first. */
+    const inProgress = discard.length > 0 || !!currentCard || skipped.length > 0;
+    let warning = '';
+    if (size === 0) warning = 'Nothing matches that combination — widen the setup to start.';
+    else if (inProgress) warning = 'Starting a round clears the one in progress.';
+    $roundSetupWarning.textContent = warning;
+    $roundSetupWarning.classList.toggle('hidden', warning === '');
+    $roundSetupWarning.classList.toggle('blocking', size === 0);
+
+    $roundSetupStartBtn.disabled = size === 0;
+    $roundSetupStartBtn.textContent = inProgress ? 'Start new round' : 'Start round';
+
+    if (refocus) {
+      const again = $roundSetupOverlay.querySelector(refocus);
+      if (again) again.focus();
+    }
+  }
+
+  /* A selector that finds the same chip again after a re-render. */
+  function chipSelectorFor(el) {
+    if (!el || !el.classList || !el.classList.contains('round-chip')) return null;
+    const d = el.dataset;
+    if (d.category !== undefined) return `[data-category="${CSS.escape(d.category)}"]`;
+    if (d.rarity !== undefined) return `[data-rarity="${CSS.escape(d.rarity)}"]`;
+    if (d.length !== undefined) return `[data-length="${CSS.escape(d.length)}"]`;
+    return null;
+  }
+
+  /* Topic chips are a filter, not a picker: turning the last one off would
+     mean an empty deck, so clearing them all reads as "every topic". */
+  function toggleDraftCategory(category) {
+    const cats = availableCategories();
+    const current = roundDraft.categories.length === 0 ? [...cats] : [...roundDraft.categories];
+    const next = current.includes(category)
+      ? current.filter(c => c !== category)
+      : [...current, category];
+    roundDraft.categories = (next.length === 0 || next.length === cats.length) ? [] : next;
+    renderRoundSetup();
+  }
+
+  function applyRoundSetup() {
+    if (!roundDraft || roundDeckSize(roundDraft) === 0) return;
+    roundFilters = normalizeRoundFilters(roundDraft);
+    persistRoundFilters();
+    updateRoundSummary();
+    closeRoundSetup();
+    resetGame();
+    const size = deck.length;
+    showToast(roundFiltersActive(roundFilters)
+      ? `New round — ${size} card${size === 1 ? '' : 's'} · ${describeRoundFilters(roundFilters)}`
+      : `New round — the full deck, ${size} cards`);
+  }
+
   function openBgModal() {
     openOverlay($bgModalOverlay);
     const selected = $bgOptionList.querySelector('.bg-option[aria-checked="true"]')
@@ -1829,6 +2037,68 @@
   $answeredModalOverlay.addEventListener('click', (e) => {
     if (e.target === $answeredModalOverlay) closeAnsweredModal();
   });
+
+  $roundSetupBtn.addEventListener('click', openRoundSetup);
+  $roundSetupClose.addEventListener('click', closeRoundSetup);
+  $roundSetupOverlay.addEventListener('click', (e) => {
+    if (e.target === $roundSetupOverlay) closeRoundSetup();
+  });
+  $roundCategoryChips.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-category]');
+    if (chip) toggleDraftCategory(chip.dataset.category);
+  });
+  $roundRarityChips.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-rarity]');
+    if (!chip) return;
+    roundDraft.minRarity = chip.dataset.rarity;
+    renderRoundSetup();
+  });
+  $roundLengthChips.addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-length]');
+    if (!chip) return;
+    roundDraft.limit = Number(chip.dataset.length);
+    renderRoundSetup();
+  });
+
+  /* Arrow/Home/End roving focus for the two radiogroups (WCAG 2.1.1),
+     matching the background picker's behaviour. */
+  function bindRoundRadioKeys(container, apply) {
+    container.addEventListener('keydown', (e) => {
+      const options = Array.from(container.querySelectorAll('.round-chip'));
+      const current = options.indexOf(document.activeElement);
+      if (current === -1) return;
+      let next = -1;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        next = (current + 1) % options.length;
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        next = (current - 1 + options.length) % options.length;
+      } else if (e.key === 'Home') {
+        next = 0;
+      } else if (e.key === 'End') {
+        next = options.length - 1;
+      }
+      if (next === -1) return;
+      e.preventDefault();
+      apply(options[next]);
+      /* renderRoundSetup replaced the DOM — refocus the chip in its new node */
+      const moved = container.querySelectorAll('.round-chip')[next];
+      if (moved) moved.focus();
+    });
+  }
+  bindRoundRadioKeys($roundRarityChips, (chip) => {
+    roundDraft.minRarity = chip.dataset.rarity;
+    renderRoundSetup();
+  });
+  bindRoundRadioKeys($roundLengthChips, (chip) => {
+    roundDraft.limit = Number(chip.dataset.length);
+    renderRoundSetup();
+  });
+
+  $roundSetupResetBtn.addEventListener('click', () => {
+    roundDraft = { ...ROUND_FILTER_DEFAULTS, categories: [] };
+    renderRoundSetup();
+  });
+  $roundSetupStartBtn.addEventListener('click', applyRoundSetup);
 
   $bgBtn.addEventListener('click', openBgModal);
   $bgModalClose.addEventListener('click', closeBgModal);
@@ -2094,11 +2364,16 @@
     if (e.key === 'Escape' && $bgModalOverlay.classList.contains('open')) {
       closeBgModal();
     }
+    if (e.key === 'Escape' && $roundSetupOverlay.classList.contains('open')) {
+      closeRoundSetup();
+    }
   });
 
   function updateDeckCount() {
-    const total = getAllQuestions().length;
-    document.getElementById('remainingCount').textContent = total;
+    /* The resume prompt leaves the live deck empty until the player picks, so
+       fall back to the size a fresh round would deal rather than showing 0. */
+    document.getElementById('remainingCount').textContent =
+      deck.length > 0 ? deck.length : roundDeckSize(roundFilters);
   }
 
   /* Keyboard shortcuts */
@@ -2149,6 +2424,8 @@
   /* ── Boot ── */
   loadTheme();
   loadBackground();
+  loadRoundFilters();
+  updateRoundSummary();
   loadCardScale();
   initCardResize();
   loadPileScale();

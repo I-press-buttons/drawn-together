@@ -17,6 +17,9 @@ stdlib server — no frameworks, no build step, no pip installs.
 - **Featured packs** — curated packs shipped with the game (starting with
   Biblical Marriage), shown to everyone and individually toggleable per
   viewer
+- **Round setup** — shape the deck before you deal it: pick topics, set a
+  rarity floor (skip the commons and go straight to the deep ones) and cap
+  the round at 10, 20 or 30 cards
 - **Greatest hits** — heart a question mid-game and replay your favorites
   as their own round
 - **Retire questions** you never want to see again (with undo)

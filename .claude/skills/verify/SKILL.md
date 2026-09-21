@@ -43,4 +43,11 @@ preamble and selector style.
 - Marks can be seeded without UI: `POST /api/marks/favorites/p1-1` (reload
   the page afterward so the app picks them up).
 - Server state persists across page reloads (session resume) — a "clean"
-  check needs a fresh DATA_DIR, not just a reload.
+  check needs a fresh DATA_DIR, not just a reload. The same applies between
+  runs: a second `smoke.mjs` against the same server sees the first run's
+  pack (deck count 151, not 150).
+- `[data-rarity="..."]` is ambiguous — the active card carries it too, so
+  scope round-setup chip selectors to their group
+  (`#roundRarityChips [data-rarity="mythic"]`).
+- Round setup lives on the empty state: with a card face-up, `#roundSetupBtn`
+  is hidden until it's answered or skipped.
