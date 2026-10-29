@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12.16-slim-bookworm
 WORKDIR /app
 COPY server.py index.html style.css app.js config.js store-server.js questions.json featured_packs.json ./
 COPY backgrounds ./backgrounds

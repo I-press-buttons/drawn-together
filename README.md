@@ -125,3 +125,8 @@ python3 -m unittest test_server.py
 | `server.py` | Python stdlib server: static files + pack/marks API |
 | `test_server.py` | API test suite (`unittest`) |
 | `Dockerfile` | Container image (`python:3.12-slim`) |
+
+
+## Security updates (October 2026)
+
+Rebuild and recreate existing containers to adopt Python 3.12.16 and its compromised-certificate distrust fix. Keep the `/data` volume when recreating the container. Updating source alone does not replace the runtime in a running image.
